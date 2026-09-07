@@ -32,6 +32,8 @@
   }
   .chip .k{font-size:10px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
   .chip .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums}
+  /* "Repulsors" is far wider than a score, so the section chip runs smaller */
+  .chip .v.name{font-size:14px; letter-spacing:.06em; padding-top:4px}
   .chip .v.under{color:var(--good)}
   .chip .v.over{color:var(--warn)}
   #sel{display:flex; gap:6px; flex-wrap:wrap; justify-content:center; width:min(900px,100%)}
@@ -43,6 +45,12 @@
   #sel button.done{color:var(--good); border-color:#2a4a52}
   #sel button.at{background:var(--accent); color:#04121a; border-color:var(--accent)}
   #sel button:disabled{opacity:.3; cursor:not-allowed}
+  /* The selector splits into one labelled group per section, so the row itself shows
+     where suns start and where repulsors take over. */
+  .selgroup{display:flex; gap:6px; align-items:center}
+  .selgroup .lbl{font-size:10px; letter-spacing:.14em; color:var(--muted);
+    text-transform:uppercase; padding-right:2px}
+  .selgroup + .selgroup{border-left:1px solid #1e2440; padding-left:10px}
   /* Grow the board to whatever the viewport allows. The 3rd term keeps the
      3:2 box from pushing the HUD and buttons off-screen on short windows —
      ~275px is the chrome above and below it (the hole selector adds ~42px). */
@@ -67,12 +75,29 @@
   button.ghost{background:transparent; color:var(--muted); border:1px solid #2a315a}
   #bar{display:flex; gap:8px; width:min(900px,100%); justify-content:center; flex-wrap:wrap}
   #hint{color:var(--muted); font-size:12px; text-align:center; min-height:16px}
+  /* Title card. Fixed over the whole page rather than inside #wrap like #overlay, so
+     the board animates behind it and no stray click reaches the canvas before the
+     round starts — which is also why nothing else needs to gate input. */
+  #start{
+    position:fixed; inset:0; z-index:10; display:flex; align-items:center;
+    justify-content:center; background:rgba(4,5,11,.78); backdrop-filter:blur(4px);
+  }
+  #start .card{
+    background:var(--panel); border:1px solid #2a315a; border-radius:16px;
+    padding:34px 38px; max-width:min(390px, 100% - 32px); text-align:center;
+    box-shadow:0 30px 80px -30px #000;
+  }
+  #start h2{font-size:26px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px}
+  #start h2 b{color:var(--accent)}
+  #start p{color:var(--muted); margin-bottom:22px}
+  #start .row{display:flex; gap:8px; justify-content:center}
 </style>
 </head>
 <body>
   <h1>Gravity <b>Golf</b></h1>
 
   <div id="hud">
+    <div class="chip"><span class="k">Section</span><span class="v name" id="s-sec">Planets</span></div>
     <div class="chip"><span class="k">Hole</span><span class="v" id="s-hole">1</span></div>
     <div class="chip"><span class="k">Par</span><span class="v" id="s-par">3</span></div>
     <div class="chip"><span class="k">Strokes</span><span class="v" id="s-str">0</span></div>
@@ -98,6 +123,17 @@
   </div>
   <div id="hint">Drag back from the ball and release to putt. Planets pull — use them.</div>
 
+  <div id="start">
+    <div class="card">
+      <h2>Gravity <b>Golf</b></h2>
+      <p>Nine holes in three sections: planets pull, then suns burn, then repulsors push.</p>
+      <div class="row">
+        <button id="st-start">Start</button>
+        <button class="ghost" id="st-cont" hidden>Continue</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 (() => {
 "use strict";
@@ -112,23 +148,40 @@ ctx.scale(DPR, DPR);
 
 // ---------- course design ----------
 // coords in the 900x600 canvas space
+// The course runs in three sections, ordered by the hardest body a hole contains:
+// planets only, then the holes that add a sun, then the holes that add a repulsor
+// (see SECTIONS / holeSection below). Keep new holes in their section's run — the
+// #debug audit warns if this array ever falls out of section order.
 const HOLES = [
+  // ---- section 1: planets ----
   { par:2, tee:{x:90,y:300}, cup:{x:810,y:300}, planets:[
       {x:450,y:300,r:46,type:'planet'} ] },
   { par:3, tee:{x:90,y:500}, cup:{x:820,y:110}, planets:[
       {x:360,y:330,r:52,type:'planet'},
       {x:640,y:220,r:34,type:'planet'} ] },
+
+  // ---- section 2: suns ----
   { par:3, tee:{x:100,y:100}, cup:{x:800,y:500}, planets:[
       {x:450,y:300,r:70,type:'sun'} ] },
+  { par:4, tee:{x:80,y:520}, cup:{x:830,y:80}, planets:[
+      {x:300,y:360,r:44,type:'planet'},
+      {x:480,y:250,r:38,type:'sun'},
+      {x:660,y:170,r:40,type:'planet'} ] },
+  // sun blockade: the sun sits dead on the tee->cup line, so you have to commit to a
+  // side. The planets below and above bend you back toward the cup. The old layout
+  // ran along y=110 with two planets 220px+ off the line — outside their 176px reach,
+  // so they pulled on nothing and a shot up the top wall coasted home.
+  { par:4, tee:{x:100,y:180}, cup:{x:800,y:180}, planets:[
+      {x:280,y:320,r:44,type:'planet'},
+      {x:450,y:180,r:46,type:'sun'},
+      {x:640,y:60,r:38,type:'planet'} ] },
+
+  // ---- section 3: repulsors ----
   // repulsor introduction: the planet blocks the straight line, and the repulsor
   // guards the corner cup. Get past it and its push works in your favour.
   { par:4, tee:{x:100,y:500}, cup:{x:830,y:110}, planets:[
       {x:380,y:330,r:46,type:'planet'},
       {x:700,y:220,r:40,type:'repulsor'} ] },
-  { par:4, tee:{x:80,y:520}, cup:{x:830,y:80}, planets:[
-      {x:300,y:360,r:44,type:'planet'},
-      {x:480,y:250,r:38,type:'sun'},
-      {x:660,y:170,r:40,type:'planet'} ] },
   // repulsor gate: the repulsor sits straight above the tee, so firing up the middle
   // shoves you off line. The planet up-right pulls you back toward the cup.
   { par:3, tee:{x:450,y:545}, cup:{x:430,y:80}, planets:[
@@ -138,14 +191,6 @@ const HOLES = [
       {x:300,y:300,r:30,type:'repulsor'},
       {x:470,y:300,r:60,type:'sun'},
       {x:640,y:300,r:30,type:'repulsor'} ] },
-  // sun blockade: the sun sits dead on the tee->cup line, so you have to commit to a
-  // side. The planets below and above bend you back toward the cup. The old layout
-  // ran along y=110 with two planets 220px+ off the line — outside their 176px reach,
-  // so they pulled on nothing and a shot up the top wall coasted home.
-  { par:4, tee:{x:100,y:180}, cup:{x:800,y:180}, planets:[
-      {x:280,y:320,r:44,type:'planet'},
-      {x:450,y:180,r:46,type:'sun'},
-      {x:640,y:60,r:38,type:'planet'} ] },
   // The finale, and the only hole using all three body types. Two things are load
   // bearing. The planet and sun stacked at x=450 overlap their wells to span the full
   // board height, so no route to the cup stays out of gravity — bodies clustered in
@@ -213,6 +258,26 @@ function planetColor(p){
   return {a:'#8fd0ff',b:'#2a5fae',glow:'rgba(90,150,255,.16)'};
 }
 
+// ---------- sections ----------
+// A hole belongs to the section of the hardest body it contains, so a hole carrying
+// both a sun and a repulsor sits with the repulsors. The grouping is derived rather
+// than a hardcoded range: adding a hole to HOLES classifies it, and only its position
+// in the array is hand-maintained (checked by the #debug audit).
+const SECTIONS = [
+  {name:'Planets',   blurb:'Planets pull. Bank off their wells or slingshot around them.'},
+  {name:'Suns',      blurb:"Suns burn the ball up on contact, and their pull is half as wide as a planet's — it bites late."},
+  {name:'Repulsors', blurb:'Repulsors push instead of pulling. Line up so the shove sends you where you want to go.'},
+];
+function holeSection(h){
+  if(h.planets.some(p => p.type==='repulsor')) return 2;
+  if(h.planets.some(p => p.type==='sun')) return 1;
+  return 0;
+}
+// true when hole i is the last of its section (the final hole is not — it ends the round)
+function isSectionEnd(i){
+  return i < HOLES.length-1 && holeSection(HOLES[i]) !== holeSection(HOLES[i+1]);
+}
+
 // ---------- state ----------
 let holeIdx = 0, strokes = 0;
 // Per-hole strokes, null until you sink it. Replaces a running total: with a hole
@@ -221,7 +286,10 @@ let holeIdx = 0, strokes = 0;
 // "Replay hole" sits outside it and stays clickable after you sink.)
 let scores = new Array(HOLES.length).fill(null);
 let reached = 0;                       // furthest hole unlocked
-const SAVE_KEY = 'gravity-golf/v1';
+let hadSave = false;                   // a save was read at boot -> offer Continue
+// v2: the section regroup reordered HOLES, and scores are stored by index, so a v1
+// save would pin old scores to different holes. A new key ignores it cleanly.
+const SAVE_KEY = 'gravity-golf/v2';
 
 function toPar(){
   let t = 0;
@@ -239,6 +307,7 @@ function loadProgress(){
     if(!d || !Array.isArray(d.scores) || d.scores.length !== HOLES.length) return;
     reached = Math.min(Math.max(d.reached|0, 0), HOLES.length-1);
     scores = d.scores.map(s => (Number.isInteger(s) && s > 0) ? s : null);
+    hadSave = true;
   }catch(e){}
 }
 let ball, restPos, sunk, aiming, aimStart, aimNow, confetti = [], stars = [];
@@ -251,19 +320,33 @@ function makeStars(){
 }
 makeStars();
 
+// Flat list of the hole buttons in hole order. The buttons now live inside per-section
+// wrappers, so syncSelector can no longer index #sel's children to find them.
+const selBtns = [];
 function buildSelector(){
   const s = document.getElementById('sel');
+  let group = null, sec = -1;
   for(let i=0;i<HOLES.length;i++){
+    if(holeSection(HOLES[i]) !== sec){
+      sec = holeSection(HOLES[i]);
+      group = document.createElement('div');
+      group.className = 'selgroup';
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = SECTIONS[sec].name;
+      group.appendChild(lbl);
+      s.appendChild(group);
+    }
     const b = document.createElement('button');
     b.textContent = i+1;
     b.onclick = () => { if(i <= reached) loadHole(i); };
-    s.appendChild(b);
+    group.appendChild(b);
+    selBtns.push(b);
   }
 }
 function syncSelector(){
-  const kids = document.getElementById('sel').children;
-  for(let i=0;i<kids.length;i++){
-    const b = kids[i];
+  for(let i=0;i<selBtns.length;i++){
+    const b = selBtns[i];
     const locked = i > reached;
     b.disabled = locked;
     b.className = i===holeIdx ? 'at' : (scores[i]!=null ? 'done' : '');
@@ -294,6 +377,7 @@ function newGame(){
 
 function syncHUD(){
   const h = HOLES[holeIdx];
+  document.getElementById('s-sec').textContent = SECTIONS[holeSection(h)].name;
   document.getElementById('s-hole').textContent = holeIdx+1;
   document.getElementById('s-par').textContent = h.par;
   document.getElementById('s-str').textContent = strokes;
@@ -505,9 +589,18 @@ function sink(){
   const last = holeIdx === HOLES.length-1;
   const tot = toPar();
   const totTxt = tot===0?'even': tot>0?tot+' over par':(-tot)+' under par';
-  showOverlay(name,
-    last ? `Final: ${totTxt}. Great round.` : `${strokes} stroke${strokes>1?'s':''} · you're ${totTxt}.`,
-    last ? 'Play again' : 'Next hole');
+  if(last){
+    showOverlay(name, `Final: ${totTxt}. Great round.`, 'Play again');
+  } else if(isSectionEnd(holeIdx)){
+    // The next hole is the first that can catch you out in a new way, so the card
+    // leads with the milestone and says what the new body does before you tee off.
+    const next = SECTIONS[holeSection(HOLES[holeIdx+1])];
+    showOverlay(`Section ${holeSection(HOLES[holeIdx])+1} complete`,
+      `${name} · you're ${totTxt}. ${next.blurb}`,
+      `On to ${next.name}`);
+  } else {
+    showOverlay(name, `${strokes} stroke${strokes>1?'s':''} · you're ${totTxt}.`, 'Next hole');
+  }
 }
 
 // ---------- confetti ----------
@@ -685,11 +778,11 @@ function frame(now){
 // ---------- course audit ----------
 // Since gravity became a finite well, a body further than FIELD_R radii from a hole's
 // tee->cup line exerts nothing on the direct route and reads as scenery — that is how
-// the old hole 8 ended up with two inert planets. A thin margin is the subtler trap:
+// the old layout of hole 5 ended up with two inert planets. A thin margin is the subtler trap:
 // it works today, but any later change to FIELD_R or a radius kills it silently.
 //
 // This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Two
-// standing exceptions: hole 6's planet sits 183px out against a 184px reach, yet the hole
+// standing exceptions: hole 7's planet sits 183px out against a 184px reach, yet the hole
 // plays fine because the real route curves out around the repulsor first; and hole 9's sun
 // reports no pull on the direct line by design — its job is to close the bottom lane, which
 // is off the direct route, and the planet stacked above it covers the line itself.
@@ -722,19 +815,51 @@ if(location.hash === '#debug'){
     console.warn(`gravity-golf: ${flagged.length} of ${auditCourse().length} bodies flagged — gg.audit() for the table`);
     console.table(flagged);
   }
+  // Sections are derived from each hole's bodies, but their ORDER in HOLES is hand
+  // maintained. Out of order, the section chip would walk backwards mid-round and a
+  // section-complete card would fire twice for the same section.
+  const outOfOrder = [];
+  for(let i=1;i<HOLES.length;i++){
+    if(holeSection(HOLES[i]) < holeSection(HOLES[i-1]))
+      outOfOrder.push(`hole ${i+1} (${SECTIONS[holeSection(HOLES[i])].name}) follows ` +
+                      `hole ${i} (${SECTIONS[holeSection(HOLES[i-1])].name})`);
+  }
+  if(outOfOrder.length)
+    console.warn('gravity-golf: holes out of section order — ' + outOfOrder.join('; '));
+
   window.gg = {
     audit: auditCourse,
+    sections: () => HOLES.map((h,i) => ({hole:i+1, par:h.par,
+      section: SECTIONS[holeSection(h)].name,
+      bodies: h.planets.map(p=>p.type).join('+'), sectionEnd: isSectionEnd(i)})),
     get ball(){ return ball; },
-    get state(){ return {holeIdx, strokes, totalToPar:toPar(), scores, reached, sunk, atRest:ballAtRest()}; },
+    get state(){ return {holeIdx, section:SECTIONS[holeSection(HOLES[holeIdx])].name, strokes, totalToPar:toPar(), scores, reached, sunk, atRest:ballAtRest()}; },
     putt(vx,vy){ ball.vx=vx; ball.vy=vy; strokes++; restPos={x:ball.x,y:ball.y}; syncHUD(); },
     load: loadHole,
     sim(sec){ let n=Math.round(sec/0.016); for(let i=0;i<n && !sunk;i++) stepBall(0.016); return {x:ball.x,y:ball.y,v:speed(ball),sunk,strokes,captured:ball.captured,atRest:ballAtRest()&&!ball.captured}; }
   };
 }
 
+// ---------- start screen ----------
+// Start clears the scorecard and tees up hole 1; Continue picks up at the furthest
+// hole reached, and only appears when there is progress to pick up.
+const startEl = document.getElementById('start');
+document.getElementById('st-start').onclick = () => {
+  newGame();
+  startEl.style.display = 'none';
+};
+document.getElementById('st-cont').onclick = () => {
+  loadHole(reached);
+  startEl.style.display = 'none';
+};
+
 loadProgress();
 buildSelector();
+// hole 1 loads behind the card so the board is alive under it; loadHole(0) cannot
+// lower `reached`, so this does not disturb what Continue would resume.
 loadHole(0);
+if(hadSave && (reached > 0 || scores.some(v => v != null)))
+  document.getElementById('st-cont').hidden = false;
 requestAnimationFrame(frame);
 })();
 </script>
