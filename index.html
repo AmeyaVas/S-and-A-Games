@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S &amp; A Games</title>
+<style>
+  /* The two games are committed dark themes in opposite styles — sci-fi sans and
+     medieval serif. This page stays neutral dark and lets each card carry its own
+     game's palette and typeface, so it reads as a cabinet housing two machines
+     rather than picking a winner between them. */
+  :root{
+    --bg:#0a0a0f; --ink:#e9ebf2; --muted:#8b90a3; --line:#1e2030;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    background:radial-gradient(ellipse at 50% -10%, #16182a, var(--bg) 65%);
+    color:var(--ink); min-height:100vh;
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:clamp(16px,4vw,48px);
+  }
+  main{width:100%; max-width:900px}
+
+  header{text-align:center; margin-bottom:clamp(28px,5vw,44px)}
+  h1{
+    font-size:clamp(30px,7vw,46px); font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; line-height:1.1;
+  }
+  h1 span{color:var(--muted); font-weight:300}
+  .tagline{color:var(--muted); margin-top:14px; font-size:clamp(14px,2.4vw,16px)}
+
+  .shelf{display:grid; grid-template-columns:1fr 1fr; gap:clamp(16px,3vw,24px)}
+  @media (max-width:700px){ .shelf{grid-template-columns:1fr} }
+
+  /* Each card is one block-level link, so the whole tile is the hit area. */
+  .game{
+    display:flex; flex-direction:column; text-decoration:none; overflow:hidden;
+    border:1px solid var(--edge); border-radius:var(--r); background:var(--panel);
+    color:inherit; transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .game:hover, .game:focus-visible{
+    transform:translateY(-3px); box-shadow:0 18px 40px -18px #000;
+    outline:none; border-color:var(--accent);
+  }
+  .game:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+
+  /* A small pure-CSS motif per game, standing in for a screenshot. */
+  .art{height:104px; border-bottom:1px solid var(--edge)}
+  .body{padding:20px 22px 24px; display:flex; flex-direction:column; gap:10px; flex:1}
+  .kicker{
+    font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--accent);
+  }
+  .game h2{font-size:22px; font-weight:700; letter-spacing:var(--h2ls)}
+  .pitch{color:var(--dim); font-size:14px}
+  ul{list-style:none; display:flex; flex-direction:column; gap:5px; margin-top:2px}
+  li{color:var(--dim); font-size:13px; padding-left:14px; position:relative}
+  li::before{content:""; position:absolute; left:0; top:.5em;
+    width:5px; height:5px; border-radius:50%; background:var(--accent); opacity:.65}
+  .cta{margin-top:auto; padding-top:14px; font-size:13px; font-weight:600; color:var(--accent)}
+  .cta::after{content:" \2192"}
+
+  /* Gravity Golf — deep space, cyan, soft radii, system sans. */
+  .gg{
+    --panel:#0d1020; --edge:#1e2440; --accent:#66e0ff; --dim:#8a91b4;
+    --r:14px; --h2ls:.02em;
+  }
+  .gg .art{
+    background:
+      radial-gradient(circle at 74% 62%, #66e0ff 0 5px, #66e0ff33 6px 13px, transparent 14px),
+      radial-gradient(circle at 30% 34%, #b8c4ff 0 9px, #b8c4ff26 10px 22px, transparent 23px),
+      radial-gradient(circle at 12% 76%, #fff 0 1.5px, transparent 2px),
+      radial-gradient(circle at 52% 18%, #fff 0 1.5px, transparent 2px),
+      radial-gradient(circle at 88% 26%, #fff 0 1px, transparent 2px),
+      radial-gradient(circle at 62% 86%, #fff 0 1px, transparent 2px),
+      #04050b;
+  }
+
+  /* Castle Defense — brown and gold, sharp radii, Georgia serif, battlement strip. */
+  .cd{
+    --panel:#16110c; --edge:#3a2a1a; --accent:#d4af37; --dim:#c9b48c;
+    --r:3px; --h2ls:.04em;
+    font-family:Georgia,"Palatino Linotype","Book Antiqua",serif;
+  }
+  .cd .art{
+    background:
+      repeating-linear-gradient(90deg, #3a2a1a 0 18px, transparent 18px 36px) top/100% 26px no-repeat,
+      linear-gradient(#6b4a2e 0 3px, transparent 3px) 0 26px/100% 3px no-repeat,
+      #3f6b2f;
+  }
+  .cd .kicker{letter-spacing:.16em}
+
+  footer{
+    margin-top:clamp(26px,4vw,38px); text-align:center; color:var(--muted);
+    font-size:13px; line-height:1.7; border-top:1px solid var(--line); padding-top:20px;
+  }
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px;
+    background:#14162400; color:var(--ink); border:1px solid var(--line);
+    border-radius:4px; padding:1px 5px;
+  }
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>S <span>&amp;</span> A Games</h1>
+    <p class="tagline">
+      Two browser games, built from scratch. No install, no build step,
+      no dependencies &mdash; pick one and play.
+    </p>
+  </header>
+
+  <div class="shelf">
+    <a class="game gg" href="gravity-golf/index.html">
+      <div class="art" aria-hidden="true"></div>
+      <div class="body">
+        <p class="kicker">Physics mini-golf</p>
+        <h2>Gravity Golf</h2>
+        <p class="pitch">Drag back, release, and let gravity do the rest.</p>
+        <ul>
+          <li>9 hand-made holes across three sections</li>
+          <li>Planets pull, suns burn, repulsors push</li>
+          <li>Progress and scorecard saved in your browser</li>
+        </ul>
+        <p class="cta">Play Gravity Golf</p>
+      </div>
+    </a>
+
+    <a class="game cd" href="tower-defense/index.html">
+      <div class="art" aria-hidden="true"></div>
+      <div class="body">
+        <p class="kicker">Tower defense</p>
+        <h2>Castle Defense</h2>
+        <p class="pitch">Garrison your turrets and hold the gate for a hundred waves.</p>
+        <ul>
+          <li>Four tower types, each upgradable three levels</li>
+          <li>A boss every tenth wave, escalating to wave 100</li>
+          <li>Chunky pixel-art rendering, drawn low and scaled up</li>
+        </ul>
+        <p class="cta">Play Castle Defense</p>
+      </div>
+    </a>
+  </div>
+
+  <footer>
+    Each game also runs on its own &mdash; open its <code>index.html</code> directly.<br>
+    Source and per-game notes on <a href="https://github.com/AmeyaVas/s-and-a-games">GitHub</a>.
+  </footer>
+</main>
+</body>
+</html>
