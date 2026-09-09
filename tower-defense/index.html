@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Castle Defense</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="game-area">
+      <canvas id="canvas" width="750" height="500"></canvas>
+      <div id="overlay" class="hidden">
+        <div id="overlay-message"></div>
+        <button id="restart-btn">Restart</button>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <h1>&#127984; Castle Defense</h1>
+
+      <div class="stat-row">
+        <span class="stat-label">Gold</span>
+        <span id="gold-value" class="stat-value">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Lives</span>
+        <span id="lives-value" class="stat-value">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Wave</span>
+        <span id="wave-value" class="stat-value">0 / 100</span>
+      </div>
+
+      <button id="start-wave-btn">Start Wave</button>
+
+      <h2>Towers</h2>
+      <div id="tower-list"></div>
+
+      <h2>Upgrade</h2>
+      <div id="upgrade-panel">
+        <p class="muted">Click a placed tower to upgrade it.</p>
+      </div>
+
+      <p id="hint">Choose a tower to garrison, then click open ground to build it. Defend the gate!</p>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
