@@ -55,12 +55,20 @@ The repo root holds the config both games share:
 
 ## Working on it
 
-Both games' full histories are preserved here — Gravity Golf's, and Castle
-Defense's grafted in with `git subtree`, original authorship intact. To see one
-game's commits alone:
+Both games' full histories are preserved here. Gravity Golf's is the trunk;
+Castle Defense's was grafted in with `git subtree`, every commit keeping its
+original author.
+
+One wrinkle worth knowing: `git subtree` grafts the imported tree under a new
+prefix, but the imported commits still refer to the paths they had in their own
+repo (`game.js`, not `tower-defense/game.js`). So a path-filtered log does *not*
+reach Castle Defense's pre-merge commits:
 
 ```sh
-git log --oneline -- tower-defense/
+git log --oneline -- tower-defense/       # only changes made since the merge
+git log --oneline castle-defense-import   # its 7 original commits
 ```
+
+The `castle-defense-import` tag marks that history as it stood when it came in.
 
 Changes land on a branch and go in through a pull request.
