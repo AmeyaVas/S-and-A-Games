@@ -1,96 +1,74 @@
-# Gravity Golf
+# S & A Games
 
-A tiny physics mini-golf game. One file, no build, no dependencies —
-double-click `index.html` to play in any browser.
+Two browser games in one repo. Neither has a build step, a package manager, or a
+single dependency — every game is plain HTML, CSS and JavaScript, and runs by
+opening a file.
 
-## How to play
+| Game | What it is |
+|---|---|
+| [**Gravity Golf**](gravity-golf/) | Slingshot mini-golf played through real gravity. Planets pull, suns burn, repulsors push. 9 hand-made holes in three sections. |
+| [**Castle Defense**](tower-defense/) | Pixel-art tower defense. Four upgradable turret types, a boss every tenth wave, 100 waves to survive. |
 
-- **Drag back from the ball and release** to putt (slingshot style).
-  The dotted line previews your path; the ring around the ball shows power.
-- Planets **pull** the ball with real gravity — bank shots off their wells,
-  slingshot around them, or hit one dead-on and bounce straight back.
-- **Suns** (orange) burn the ball up — you respawn at your last resting spot,
-  losing the stroke.
-- **Repulsors** (purple) push the ball away instead of pulling.
-- Get the ball into the cup moving slowly enough and it drops. Fewest strokes wins.
-- 9 hand-made holes, par tracked against the field.
+Each game has its own README with full instructions:
+[Gravity Golf](gravity-golf/README.md) · [Castle Defense](tower-defense/README.md).
 
-## The three sections
+## Playing
 
-The course introduces one hazard at a time, and the holes are grouped to match. A
-hole belongs to the section of the hardest body it contains, so a hole with both a
-sun and a repulsor sits with the repulsors.
-
-| Section | What's new | Holes |
-|---|---|---|
-| **Planets** | pull only | 1-2 |
-| **Suns** | a sun on the board | 3-5 |
-| **Repulsors** | a repulsor on the board | 6-9 |
-
-Sink the last hole of a section and the card tells you which hazard is coming next.
-The grouping is derived from each hole's bodies (`holeSection` in `index.html`) — only
-the *order* of `HOLES` is hand-maintained, and `#debug` warns if it falls out of
-section order.
-
-## Getting around
-
-- **Start screen** — the title card. **Start** begins a fresh round on hole 1;
-  **Continue** appears only if you have progress saved and drops you at the furthest
-  hole you have reached.
-- **Hole selector** — the numbered row under the scoreboard. A hole unlocks once
-  you reach it, so you can jump back to any hole you have played, but not skip
-  ahead. Green means holed, highlighted is where you are, dimmed is still locked.
-  The row is split into the three sections above, each with its own label.
-- **Replay hole** — restart the current hole
-- **New game** — back to hole 1 with a clean scorecard. Holes you have already
-  reached stay unlocked.
-
-Your unlocked holes and scorecard are saved in the browser, so closing the tab
-and coming back keeps your progress. Replaying a hole overwrites that hole's
-score rather than adding to your total.
-
-Saving works when you double-click `index.html` in Chrome, and over a local
-server — both verified. Browsers do differ on whether they allow storage for
-`file://` pages, though, so if progress ever resets between sessions on some
-other browser, that is why. Nothing breaks either way: the game plays the same,
-it just starts over. Serving the folder over HTTP sidesteps it entirely:
+Open either game's `index.html` in a browser — double-click it, or:
 
 ```sh
-npx serve .        # or any static file server
+start gravity-golf/index.html    # Windows
+open  gravity-golf/index.html    # macOS
+xdg-open gravity-golf/index.html # Linux
 ```
 
-## Tinkering
+To serve both games from one place, the way GitHub Pages does, run a static
+server at the repo root and use the landing page:
 
-Open `index.html#debug` to expose `window.gg` in the console:
-
-```js
-gg.state           // current hole / section / strokes / score / scores[] / furthest unlocked
-gg.ball            // live ball: {x, y, vx, vy, alive, captured}
-gg.load(4)         // jump to hole 5 (0-indexed)
-gg.putt(300, -200) // fire the ball with a velocity vector
-gg.sim(2.5)        // fast-forward the physics 2.5s, return where the ball ended up
-gg.audit()         // check every body actually reaches its hole's line
-gg.sections()      // per hole: section, par, body types, and whether it ends a section
+```sh
+npx serve .    # then open the printed URL
 ```
 
-`gg.audit()` exists because gravity is a *finite* well: a body more than `FIELD_R`
-radii from a hole's tee-to-cup line exerts nothing on the direct route and is just
-scenery. It returns a row per body with its distance, reach and margin, and anything
-out of reach — or within `AUDIT_THIN` px of it — is flagged in the console on load
-under `#debug`. Run it after editing `HOLES`.
+Serving over HTTP is also the more reliable way to play Gravity Golf, since some
+browsers refuse `localStorage` to `file://` pages and its saved progress depends
+on it. See [its README](gravity-golf/README.md) for the details.
 
-It measures the *straight* line only, so read it as a smell rather than a verdict.
-Hole 7 is the standing example: its planet is 183px out against a 184px reach and
-gets flagged, but the hole plays fine, because the real route curves around the
-repulsor before reaching it.
+## Layout
 
-`gg.sim()` steps the physics directly instead of waiting on animation frames,
-so it is the quick way to test a shot from the console. It stops early if the
-ball sinks, and reports where things ended up:
-
-```js
-gg.sim(6) // -> {x, y, v, sunk, strokes, captured, atRest}
+```
+.
+├─ index.html         landing page linking to both games
+├─ gravity-golf/      Gravity Golf, self-contained
+└─ tower-defense/     Castle Defense, self-contained
 ```
 
-Course layout and physics constants are all near the top of the `<script>`
-block in `index.html` (`HOLES`, `G`, `FRICTION`, `CUP_MOUTH`, …).
+Each game owns its folder completely and shares no code with the other. That is
+deliberate: both happen to draw to a canvas and track a score, but they are free
+to diverge, and a shared helper only earns its place once the same thing has
+actually been written twice.
+
+The repo root holds the config both games share:
+
+- **`.gitattributes`** pins every text file to LF in the repository and on
+  checkout, so the tree looks identical on Windows, macOS and Linux.
+- **`.gitignore`** covers both folders at any depth.
+
+## Working on it
+
+Both games' full histories are preserved here. Gravity Golf's is the trunk;
+Castle Defense's was grafted in with `git subtree`, every commit keeping its
+original author.
+
+One wrinkle worth knowing: `git subtree` grafts the imported tree under a new
+prefix, but the imported commits still refer to the paths they had in their own
+repo (`game.js`, not `tower-defense/game.js`). So a path-filtered log does *not*
+reach Castle Defense's pre-merge commits:
+
+```sh
+git log --oneline -- tower-defense/       # only changes made since the merge
+git log --oneline castle-defense-import   # its 7 original commits
+```
+
+The `castle-defense-import` tag marks that history as it stood when it came in.
+
+Changes land on a branch and go in through a pull request.

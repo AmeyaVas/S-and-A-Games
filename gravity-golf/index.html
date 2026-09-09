@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Gravity Golf</title>
+<style>
+  :root{
+    --bg:#05060d; --panel:#0d1020; --ink:#e8ecff; --muted:#8a91b4;
+    --accent:#66e0ff; --good:#7CFFB2; --warn:#ff6b8b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(circle at 50% -20%, #141a33, var(--bg) 60%);
+    color:var(--ink);
+    font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100%; padding:16px; gap:12px; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+  h1{font-size:15px; letter-spacing:.28em; font-weight:600; text-transform:uppercase;
+     color:var(--muted)}
+  h1 b{color:var(--accent); font-weight:600}
+  #hud{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:stretch;
+    width:min(900px,100%);
+  }
+  .chip{
+    background:var(--panel); border:1px solid #1e2440; border-radius:10px;
+    padding:8px 14px; display:flex; flex-direction:column; align-items:center; min-width:74px;
+  }
+  .chip .k{font-size:10px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
+  .chip .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums}
+  /* "Repulsors" is far wider than a score, so the section chip runs smaller */
+  .chip .v.name{font-size:14px; letter-spacing:.06em; padding-top:4px}
+  .chip .v.under{color:var(--good)}
+  .chip .v.over{color:var(--warn)}
+  #sel{display:flex; gap:6px; flex-wrap:wrap; justify-content:center; width:min(900px,100%)}
+  #sel button{
+    font:inherit; font-weight:700; font-size:12px; width:30px; height:30px; padding:0;
+    border-radius:8px; background:var(--panel); color:var(--muted);
+    border:1px solid #1e2440; cursor:pointer; font-variant-numeric:tabular-nums;
+  }
+  #sel button.done{color:var(--good); border-color:#2a4a52}
+  #sel button.at{background:var(--accent); color:#04121a; border-color:var(--accent)}
+  #sel button:disabled{opacity:.3; cursor:not-allowed}
+  /* The selector splits into one labelled group per section, so the row itself shows
+     where suns start and where repulsors take over. */
+  .selgroup{display:flex; gap:6px; align-items:center}
+  .selgroup .lbl{font-size:10px; letter-spacing:.14em; color:var(--muted);
+    text-transform:uppercase; padding-right:2px}
+  .selgroup + .selgroup{border-left:1px solid #1e2440; padding-left:10px}
+  /* Grow the board to whatever the viewport allows. The 3rd term keeps the
+     3:2 box from pushing the HUD and buttons off-screen on short windows —
+     ~275px is the chrome above and below it (the hole selector adds ~42px). */
+  #wrap{position:relative; width:min(1280px, 100%, (100vh - 275px) * 1.5); aspect-ratio:3/2}
+  canvas{
+    width:100%; height:100%; display:block; border-radius:14px;
+    border:1px solid #1e2440; background:#04050b; touch-action:none;
+    box-shadow:0 20px 60px -20px #000;
+  }
+  #overlay{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(4,5,11,.72); backdrop-filter:blur(3px); border-radius:14px; text-align:center;
+  }
+  #overlay .card{background:var(--panel); border:1px solid #2a315a; border-radius:16px;
+    padding:26px 30px; max-width:340px}
+  #overlay h2{font-size:22px; margin-bottom:6px}
+  #overlay p{color:var(--muted); margin-bottom:16px}
+  button{
+    font:inherit; font-weight:600; color:#04121a; background:var(--accent);
+    border:0; border-radius:9px; padding:10px 20px; cursor:pointer;
+  }
+  button.ghost{background:transparent; color:var(--muted); border:1px solid #2a315a}
+  #bar{display:flex; gap:8px; width:min(900px,100%); justify-content:center; flex-wrap:wrap}
+  #hint{color:var(--muted); font-size:12px; text-align:center; min-height:16px}
+  /* Title card. Fixed over the whole page rather than inside #wrap like #overlay, so
+     the board animates behind it and no stray click reaches the canvas before the
+     round starts — which is also why nothing else needs to gate input. */
+  #start{
+    position:fixed; inset:0; z-index:10; display:flex; align-items:center;
+    justify-content:center; background:rgba(4,5,11,.78); backdrop-filter:blur(4px);
+  }
+  #start .card{
+    background:var(--panel); border:1px solid #2a315a; border-radius:16px;
+    padding:34px 38px; max-width:min(390px, 100% - 32px); text-align:center;
+    box-shadow:0 30px 80px -30px #000;
+  }
+  #start h2{font-size:26px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px}
+  #start h2 b{color:var(--accent)}
+  #start p{color:var(--muted); margin-bottom:22px}
+  #start .row{display:flex; gap:8px; justify-content:center}
+</style>
+</head>
+<body>
+  <h1>Gravity <b>Golf</b></h1>
+
+  <div id="hud">
+    <div class="chip"><span class="k">Section</span><span class="v name" id="s-sec">Planets</span></div>
+    <div class="chip"><span class="k">Hole</span><span class="v" id="s-hole">1</span></div>
+    <div class="chip"><span class="k">Par</span><span class="v" id="s-par">3</span></div>
+    <div class="chip"><span class="k">Strokes</span><span class="v" id="s-str">0</span></div>
+    <div class="chip"><span class="k">Total</span><span class="v" id="s-tot">E</span></div>
+  </div>
+
+  <div id="sel" role="group" aria-label="Hole select"></div>
+
+  <div id="wrap">
+    <canvas id="c" width="900" height="600"></canvas>
+    <div id="overlay">
+      <div class="card">
+        <h2 id="ov-title">Hole complete</h2>
+        <p id="ov-text">Nice putt.</p>
+        <button id="ov-btn">Next hole</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bar">
+    <button class="ghost" id="btn-retry">Replay hole</button>
+    <button class="ghost" id="btn-reset">New game</button>
+  </div>
+  <div id="hint">Drag back from the ball and release to putt. Planets pull — use them.</div>
+
+  <div id="start">
+    <div class="card">
+      <h2>Gravity <b>Golf</b></h2>
+      <p>Nine holes in three sections: planets pull, then suns burn, then repulsors push.</p>
+      <div class="row">
+        <button id="st-start">Start</button>
+        <button class="ghost" id="st-cont" hidden>Continue</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+"use strict";
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+// W/H stay the logical play-field size that every coordinate below is written in.
+// The backing store is scaled by the display density so the board stays sharp now
+// that CSS stretches it past 900px; ctx.scale lets all drawing keep using W/H.
+const W = 900, H = 600;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+cv.width = W * DPR; cv.height = H * DPR;
+ctx.scale(DPR, DPR);
+
+// ---------- course design ----------
+// coords in the 900x600 canvas space
+// The course runs in three sections, ordered by the hardest body a hole contains:
+// planets only, then the holes that add a sun, then the holes that add a repulsor
+// (see SECTIONS / holeSection below). Keep new holes in their section's run — the
+// #debug audit warns if this array ever falls out of section order.
+const HOLES = [
+  // ---- section 1: planets ----
+  { par:2, tee:{x:90,y:300}, cup:{x:810,y:300}, planets:[
+      {x:450,y:300,r:46,type:'planet'} ] },
+  { par:3, tee:{x:90,y:500}, cup:{x:820,y:110}, planets:[
+      {x:360,y:330,r:52,type:'planet'},
+      {x:640,y:220,r:34,type:'planet'} ] },
+
+  // ---- section 2: suns ----
+  { par:3, tee:{x:100,y:100}, cup:{x:800,y:500}, planets:[
+      {x:450,y:300,r:70,type:'sun'} ] },
+  { par:4, tee:{x:80,y:520}, cup:{x:830,y:80}, planets:[
+      {x:300,y:360,r:44,type:'planet'},
+      {x:480,y:250,r:38,type:'sun'},
+      {x:660,y:170,r:40,type:'planet'} ] },
+  // sun blockade: the sun sits dead on the tee->cup line, so you have to commit to a
+  // side. The planets below and above bend you back toward the cup. The old layout
+  // ran along y=110 with two planets 220px+ off the line — outside their 176px reach,
+  // so they pulled on nothing and a shot up the top wall coasted home.
+  { par:4, tee:{x:100,y:180}, cup:{x:800,y:180}, planets:[
+      {x:280,y:320,r:44,type:'planet'},
+      {x:450,y:180,r:46,type:'sun'},
+      {x:640,y:60,r:38,type:'planet'} ] },
+
+  // ---- section 3: repulsors ----
+  // repulsor introduction: the planet blocks the straight line, and the repulsor
+  // guards the corner cup. Get past it and its push works in your favour.
+  { par:4, tee:{x:100,y:500}, cup:{x:830,y:110}, planets:[
+      {x:380,y:330,r:46,type:'planet'},
+      {x:700,y:220,r:40,type:'repulsor'} ] },
+  // repulsor gate: the repulsor sits straight above the tee, so firing up the middle
+  // shoves you off line. The planet up-right pulls you back toward the cup.
+  { par:3, tee:{x:450,y:545}, cup:{x:430,y:80}, planets:[
+      {x:450,y:390,r:36,type:'repulsor'},
+      {x:620,y:230,r:46,type:'planet'} ] },
+  { par:4, tee:{x:90,y:300}, cup:{x:815,y:300}, planets:[
+      {x:300,y:300,r:30,type:'repulsor'},
+      {x:470,y:300,r:60,type:'sun'},
+      {x:640,y:300,r:30,type:'repulsor'} ] },
+  // The finale, and the only hole using all three body types. Two things are load
+  // bearing. The planet and sun stacked at x=450 overlap their wells to span the full
+  // board height, so no route to the cup stays out of gravity — bodies clustered in
+  // one band always leave a clear strip against a wall, and only a vertical pair
+  // closes it. The repulsor guards the cup, which is what actually stops the ace:
+  // blocking the straight line with a planet does not, since the ball simply arcs
+  // over, but a repulsor pushes every approach away.
+  //
+  // The sun is r60 at y=480 because that pair has to keep meeting after suns dropped to
+  // half reach. The r48 planet covers down to y=367; the ball centre can sit as low as
+  // y=593; a sun spans 4r, so closing 367->593 needs r>=57. At r42/y=435 the well would
+  // have stopped at y=519 and left a clear lane along the bottom wall.
+  { par:5, tee:{x:80,y:300}, cup:{x:830,y:300}, planets:[
+      {x:280,y:200,r:44,type:'planet'},
+      {x:450,y:175,r:48,type:'planet'},
+      {x:450,y:480,r:60,type:'sun'},
+      {x:730,y:300,r:36,type:'repulsor'} ] },
+];
+
+// ---------- physics constants ----------
+// Gravity strength, applied only inside a body's well (see FIELD_R and accelAt).
+// At the original 2600 the peak pull was 8.7 px/s² against launch speeds up to
+// MAX_PULL*LAUNCH_K = 798 px/s, which bent a full-power shot by 1px over its whole
+// flight — gravity was decorative. G is high here because the taper gives most of
+// the well far less than the peak.
+const G = 400000;
+// How far a body pulls, in multiples of its own radius. This exists so the ball can
+// come to rest: with an unbounded inverse-square field, gravity at 300px still beat
+// friction, so a "stopped" ball crept toward the nearest planet forever and never
+// got its at-rest ring. At 4.0 every hole settles 100% of the time.
+// This is the default reach; suns override it below (see SUN_FIELD_R / fieldReach).
+const FIELD_R = 4.0;
+const BALL_R = 7;
+const REST_SPEED = 6;      // below this (px/s) the ball is "at rest"
+const SINK_SPEED = 250;    // must be slower than this at the cup mouth to get caught
+const CUP_R = 16;          // visual cup radius
+const CUP_MOUTH = 32;      // ball this close to the cup gets caught (if slow enough)
+const CUP_PULL = 4200;     // strength of the cup's gravity well
+const MAX_PULL = 190;      // px of drag
+const LAUNCH_K = 4.2;      // drag px -> initial speed
+const PREVIEW_T = 1.5;     // seconds of flight the aim line predicts before fading out
+const WALL_BOUNCE = 0.72;
+const PLANET_BOUNCE = 0.6;
+const FRICTION = 0.9;      // per second velocity damping (space dust) — sets putt range
+
+// Suns kill on contact, so their pull is a death-basin rather than a slingshot, and the
+// board has to stay playable around them. That safety used to come out of MASS — a 0.25
+// multiplier — which made a sun weak but as wide as any planet: it tugged at you across
+// half the board without ever reading as dangerous. It now comes out of DISTANCE instead.
+// A sun has a planet's full mass and half its reach.
+//
+// This is not a return to the tuning that killed 91% of shots on hole 3 (full mass at the
+// full 4.0 reach, back when G was 120000). The taper in accelAt is measured against each
+// body's own reach, so halving the reach also steepens the falloff. Measured on hole 3's
+// r70 sun: pull at 100px goes 148 -> 262 px/s², but at 140px it goes 63 -> 0, and there is
+// nothing at all beyond. Over a 200-shot fan the hole's kill rate FELL, 28.5% -> 17.5% —
+// the wide weak well used to reel in stray shots that were never aimed at it, and that is
+// what went away. What went up is the price of flying close.
+const SUN_FIELD_R = 2.0;
+function fieldReach(p){ return p.r * (p.type==='sun' ? SUN_FIELD_R : FIELD_R); }
+function planetMass(p){ return p.r*p.r * (p.type==='repulsor'?-1:1); }
+function planetColor(p){
+  if(p.type==='sun') return {a:'#ffd27a',b:'#ff7a3c',glow:'rgba(255,150,60,.28)'};
+  if(p.type==='repulsor') return {a:'#9a7cff',b:'#4b2fae',glow:'rgba(120,90,255,.22)'};
+  return {a:'#8fd0ff',b:'#2a5fae',glow:'rgba(90,150,255,.16)'};
+}
+
+// ---------- sections ----------
+// A hole belongs to the section of the hardest body it contains, so a hole carrying
+// both a sun and a repulsor sits with the repulsors. The grouping is derived rather
+// than a hardcoded range: adding a hole to HOLES classifies it, and only its position
+// in the array is hand-maintained (checked by the #debug audit).
+const SECTIONS = [
+  {name:'Planets',   blurb:'Planets pull. Bank off their wells or slingshot around them.'},
+  {name:'Suns',      blurb:"Suns burn the ball up on contact, and their pull is half as wide as a planet's — it bites late."},
+  {name:'Repulsors', blurb:'Repulsors push instead of pulling. Line up so the shove sends you where you want to go.'},
+];
+function holeSection(h){
+  if(h.planets.some(p => p.type==='repulsor')) return 2;
+  if(h.planets.some(p => p.type==='sun')) return 1;
+  return 0;
+}
+// true when hole i is the last of its section (the final hole is not — it ends the round)
+function isSectionEnd(i){
+  return i < HOLES.length-1 && holeSection(HOLES[i]) !== holeSection(HOLES[i+1]);
+}
+
+// ---------- state ----------
+let holeIdx = 0, strokes = 0;
+// Per-hole strokes, null until you sink it. Replaces a running total: with a hole
+// selector you can revisit a finished hole, and a `total += diff` accumulator would
+// count it twice. (That was already reachable — the overlay covers #wrap, but
+// "Replay hole" sits outside it and stays clickable after you sink.)
+let scores = new Array(HOLES.length).fill(null);
+let reached = 0;                       // furthest hole unlocked
+let hadSave = false;                   // a save was read at boot -> offer Continue
+// v2: the section regroup reordered HOLES, and scores are stored by index, so a v1
+// save would pin old scores to different holes. A new key ignores it cleanly.
+const SAVE_KEY = 'gravity-golf/v2';
+
+function toPar(){
+  let t = 0;
+  for(let i=0;i<HOLES.length;i++) if(scores[i]!=null) t += scores[i] - HOLES[i].par;
+  return t;
+}
+// Storage throws in some private-browsing modes, so every touch is guarded and the
+// game runs fine with nothing stored.
+function saveProgress(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({reached, scores})); }catch(e){}
+}
+function loadProgress(){
+  try{
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if(!d || !Array.isArray(d.scores) || d.scores.length !== HOLES.length) return;
+    reached = Math.min(Math.max(d.reached|0, 0), HOLES.length-1);
+    scores = d.scores.map(s => (Number.isInteger(s) && s > 0) ? s : null);
+    hadSave = true;
+  }catch(e){}
+}
+let ball, restPos, sunk, aiming, aimStart, aimNow, confetti = [], stars = [];
+let flagWave = 0;
+
+function makeStars(){
+  stars = [];
+  for(let i=0;i<90;i++) stars.push({x:Math.random()*W,y:Math.random()*H,
+    s:Math.random()*1.4+0.2, t:Math.random()*6.28});
+}
+makeStars();
+
+// Flat list of the hole buttons in hole order. The buttons now live inside per-section
+// wrappers, so syncSelector can no longer index #sel's children to find them.
+const selBtns = [];
+function buildSelector(){
+  const s = document.getElementById('sel');
+  let group = null, sec = -1;
+  for(let i=0;i<HOLES.length;i++){
+    if(holeSection(HOLES[i]) !== sec){
+      sec = holeSection(HOLES[i]);
+      group = document.createElement('div');
+      group.className = 'selgroup';
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = SECTIONS[sec].name;
+      group.appendChild(lbl);
+      s.appendChild(group);
+    }
+    const b = document.createElement('button');
+    b.textContent = i+1;
+    b.onclick = () => { if(i <= reached) loadHole(i); };
+    group.appendChild(b);
+    selBtns.push(b);
+  }
+}
+function syncSelector(){
+  for(let i=0;i<selBtns.length;i++){
+    const b = selBtns[i];
+    const locked = i > reached;
+    b.disabled = locked;
+    b.className = i===holeIdx ? 'at' : (scores[i]!=null ? 'done' : '');
+    b.title = locked ? `Hole ${i+1} — reach it to unlock`
+            : scores[i]!=null ? `Hole ${i+1} — holed in ${scores[i]} (par ${HOLES[i].par})`
+            : `Hole ${i+1} — par ${HOLES[i].par}`;
+  }
+}
+
+function loadHole(i){
+  holeIdx = i;
+  if(i > reached){ reached = i; saveProgress(); }
+  const h = HOLES[i];
+  strokes = 0;
+  ball = {x:h.tee.x, y:h.tee.y, vx:0, vy:0, alive:true, captured:false};
+  restPos = {x:h.tee.x, y:h.tee.y};
+  sunk = false; aiming = false; confetti = [];
+  hideOverlay();
+  syncHUD();
+}
+
+// A fresh round: scorecard cleared, but holes you have reached stay unlocked.
+function newGame(){
+  scores.fill(null);
+  saveProgress();
+  loadHole(0);
+}
+
+function syncHUD(){
+  const h = HOLES[holeIdx];
+  document.getElementById('s-sec').textContent = SECTIONS[holeSection(h)].name;
+  document.getElementById('s-hole').textContent = holeIdx+1;
+  document.getElementById('s-par').textContent = h.par;
+  document.getElementById('s-str').textContent = strokes;
+  const tot = toPar();
+  const t = document.getElementById('s-tot');
+  t.textContent = tot===0 ? 'E' : (tot>0?'+'+tot:tot);
+  t.className = 'v ' + (tot<0?'under':tot>0?'over':'');
+  syncSelector();
+}
+
+// ---------- input ----------
+function canvasPos(e){
+  const r = cv.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return { x:(p.clientX-r.left)/r.width*W, y:(p.clientY-r.top)/r.height*H };
+}
+function speed(o){ return Math.hypot(o.vx,o.vy); }
+function ballAtRest(){ return speed(ball) < REST_SPEED; }
+
+function onDown(e){
+  if(sunk || !ballAtRest()) return;
+  const p = canvasPos(e);
+  if(Math.hypot(p.x-ball.x, p.y-ball.y) > 46) return; // must grab near ball
+  aiming = true; aimStart = {x:ball.x,y:ball.y}; aimNow = p;
+  e.preventDefault();
+}
+function onMove(e){
+  if(!aiming) return;
+  aimNow = canvasPos(e);
+  e.preventDefault();
+}
+function onUp(e){
+  if(!aiming) return;
+  aiming = false;
+  let dx = aimStart.x - aimNow.x, dy = aimStart.y - aimNow.y;
+  let d = Math.hypot(dx,dy);
+  if(d < 6) return;                       // tap, no shot
+  d = Math.min(d, MAX_PULL);
+  const ang = Math.atan2(dy,dx);
+  const v = d * LAUNCH_K;
+  ball.vx = Math.cos(ang)*v;
+  ball.vy = Math.sin(ang)*v;
+  strokes++;
+  restPos = {x:ball.x, y:ball.y};
+  syncHUD();
+  e.preventDefault();
+}
+cv.addEventListener('mousedown',onDown);
+// mousemove goes on window, not the canvas: you pull *away* from the target, and
+// every tee sits near an edge, so a full-power drag leaves the canvas. Bound to
+// the canvas, aim froze at the border and capped tee shots at 32-61% power.
+window.addEventListener('mousemove',onMove);
+window.addEventListener('mouseup',onUp);
+cv.addEventListener('touchstart',onDown,{passive:false});
+cv.addEventListener('touchmove',onMove,{passive:false});
+window.addEventListener('touchend',onUp);
+
+document.getElementById('btn-retry').onclick = () => {
+  // undo this hole's contribution isn't tracked mid-hole; just reload
+  loadHole(holeIdx);
+};
+document.getElementById('btn-reset').onclick = () => {
+  newGame();
+};
+document.getElementById('ov-btn').onclick = () => {
+  if(holeIdx < HOLES.length-1) loadHole(holeIdx+1);
+  else newGame();
+};
+
+function showOverlay(title, text, btn){
+  document.getElementById('ov-title').textContent = title;
+  document.getElementById('ov-text').textContent = text;
+  document.getElementById('ov-btn').textContent = btn;
+  document.getElementById('overlay').style.display = 'flex';
+}
+function hideOverlay(){ document.getElementById('overlay').style.display = 'none'; }
+
+// ---------- simulation ----------
+function accelAt(x,y){
+  let ax=0, ay=0;
+  for(const p of HOLES[holeIdx].planets){
+    const dx = p.x-x, dy = p.y-y;
+    let d2 = dx*dx+dy*dy;
+    const minD = p.r+BALL_R;
+    if(d2 < minD*minD) d2 = minD*minD;
+    const d = Math.sqrt(d2);
+    // Finite well. Beyond FIELD_R radii a body has no pull at all, so the ball can
+    // actually come to rest out in open space; the taper eases the pull to zero at
+    // the boundary instead of switching it off, which would visibly snap.
+    const reach = fieldReach(p);
+    if(d >= reach) continue;
+    // (1-q³)² rather than a linear (1-q)²: both hit exactly zero at the edge, but
+    // this holds nearly all the pull through the middle of the well, which is where
+    // a fast shot flies. A linear taper left only 25% of the pull there, so
+    // full-power shots sailed past almost unbent: 20px of curve, against 75px here.
+    const q = d/reach;
+    const t = 1 - q*q*q;
+    const f = G * planetMass(p) / d2 / 300 * t*t;
+    ax += f*dx/d; ay += f*dy/d;
+  }
+  return {ax,ay};
+}
+
+// ---------- shared motion ----------
+// stepBall and the aim preview both run these, so the dotted line cannot drift from
+// what the ball actually does. The preview used to re-implement the integrator and
+// left friction out entirely, which made it overshoot badly and — because an undamped
+// ball never slows, and fast balls barely bend — hid the curve the shot would take.
+const SUBSTEP = 1/360;                 // matches stepBall's dt/N at 60fps
+
+function stepFree(s, h){
+  const a = accelAt(s.x, s.y);
+  s.vx += a.ax*h; s.vy += a.ay*h;
+  const damp = Math.max(0, 1 - FRICTION*h);
+  s.vx *= damp; s.vy *= damp;
+  s.x += s.vx*h; s.y += s.vy*h;
+}
+// 'sun' if it burned up, 'hit' if it bounced off a planet, '' otherwise
+function collideBodies(s){
+  let res = '';
+  for(const p of HOLES[holeIdx].planets){
+    const dx = s.x-p.x, dy = s.y-p.y;
+    const d = Math.hypot(dx,dy), minD = p.r+BALL_R;
+    if(d < minD){
+      if(p.type==='sun') return 'sun';
+      const nx=dx/d, ny=dy/d;
+      const vn = s.vx*nx + s.vy*ny;
+      s.vx -= (1+PLANET_BOUNCE)*vn*nx;
+      s.vy -= (1+PLANET_BOUNCE)*vn*ny;
+      s.x = p.x + nx*minD; s.y = p.y + ny*minD;
+      res = 'hit';
+    }
+  }
+  return res;
+}
+function collideWalls(s){
+  if(s.x < BALL_R){ s.x=BALL_R; s.vx=-s.vx*WALL_BOUNCE; }
+  if(s.x > W-BALL_R){ s.x=W-BALL_R; s.vx=-s.vx*WALL_BOUNCE; }
+  if(s.y < BALL_R){ s.y=BALL_R; s.vy=-s.vy*WALL_BOUNCE; }
+  if(s.y > H-BALL_R){ s.y=H-BALL_R; s.vy=-s.vy*WALL_BOUNCE; }
+}
+// applies the cup's well; true when it would catch the ball
+function cupPull(s, h){
+  const cup = HOLES[holeIdx].cup;
+  const ex = cup.x-s.x, ey = cup.y-s.y;
+  const cd = Math.hypot(ex,ey) || 0.001;
+  if(cd < CUP_MOUTH){
+    const pull = CUP_PULL / Math.max(cd*cd, 36);
+    s.vx += ex/cd * pull * h;
+    s.vy += ey/cd * pull * h;
+    if(Math.hypot(s.vx,s.vy) < SINK_SPEED) return true;
+  }
+  return false;
+}
+
+function stepBall(dt){
+  // substeps for stability
+  const N = 6, h = dt/N;
+  for(let s=0;s<N;s++){
+    const cup0 = HOLES[holeIdx].cup;
+
+    // captured: spiral deterministically into the cup, then drop
+    if(ball.captured){
+      const ex = cup0.x-ball.x, ey = cup0.y-ball.y;
+      const cd = Math.hypot(ex,ey) || 0.001;
+      if(cd < 2.5){ sink(); return; }
+      const step = Math.max(cd * 0.12, 40*h);        // ease in, min crawl speed
+      const px = ex/cd, py = ey/cd;
+      const tx = -py, ty = px;                       // tangent -> slight orbit
+      ball.x += px*step + tx*step*0.55;
+      ball.y += py*step + ty*step*0.55;
+      ball.vx = ball.vy = 0;
+      continue;
+    }
+
+    stepFree(ball, h);
+    if(collideBodies(ball) === 'sun'){ killBall(); return; }
+    collideWalls(ball);
+    // cup: pull nearby balls in; grab the ones that arrive on-target and not too fast
+    if(cupPull(ball, h)) ball.captured = true;              // it's going in
+  }
+}
+
+function killBall(){
+  ball.x = restPos.x; ball.y = restPos.y;
+  ball.vx = 0; ball.vy = 0; ball.captured = false;
+  flashHint("Burned up! Back to your last spot.");
+}
+let hintTimer = 0;
+function flashHint(msg){
+  document.getElementById('hint').textContent = msg;
+  hintTimer = 2.4;
+}
+
+function sink(){
+  sunk = true;
+  ball.vx = ball.vy = 0;
+  const cup = HOLES[holeIdx].cup;
+  ball.x = cup.x; ball.y = cup.y;
+  const h = HOLES[holeIdx];
+  const diff = strokes - h.par;
+  scores[holeIdx] = strokes;           // set, not accumulate: replaying overwrites
+  saveProgress();
+  syncHUD();
+  let name = diff<=-3?'Albatross!!!':diff===-2?'Eagle!':diff===-1?'Birdie!':
+             diff===0?'Par':diff===1?'Bogey':diff===2?'Double bogey':(diff)+' over';
+  if(strokes===1) name = 'HOLE IN ONE!';
+  if(strokes===1 || diff<0) burst();
+  const last = holeIdx === HOLES.length-1;
+  const tot = toPar();
+  const totTxt = tot===0?'even': tot>0?tot+' over par':(-tot)+' under par';
+  if(last){
+    showOverlay(name, `Final: ${totTxt}. Great round.`, 'Play again');
+  } else if(isSectionEnd(holeIdx)){
+    // The next hole is the first that can catch you out in a new way, so the card
+    // leads with the milestone and says what the new body does before you tee off.
+    const next = SECTIONS[holeSection(HOLES[holeIdx+1])];
+    showOverlay(`Section ${holeSection(HOLES[holeIdx])+1} complete`,
+      `${name} · you're ${totTxt}. ${next.blurb}`,
+      `On to ${next.name}`);
+  } else {
+    showOverlay(name, `${strokes} stroke${strokes>1?'s':''} · you're ${totTxt}.`, 'Next hole');
+  }
+}
+
+// ---------- confetti ----------
+function burst(){
+  const cup = HOLES[holeIdx].cup;
+  for(let i=0;i<90;i++){
+    const a = Math.random()*6.28, sp = Math.random()*260+60;
+    confetti.push({x:cup.x,y:cup.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-80,
+      life:1, c:`hsl(${Math.random()*360},90%,65%)`, r:Math.random()*3+2});
+  }
+}
+
+// ---------- render ----------
+function draw(dt){
+  ctx.clearRect(0,0,W,H);
+  // stars
+  for(const st of stars){
+    st.t += dt*2;
+    ctx.globalAlpha = 0.4 + Math.sin(st.t)*0.3;
+    ctx.fillStyle = '#aab6ff';
+    ctx.fillRect(st.x, st.y, st.s, st.s);
+  }
+  ctx.globalAlpha = 1;
+
+  const h = HOLES[holeIdx];
+
+  // planets
+  for(const p of h.planets){
+    const col = planetColor(p);
+    // the glow is drawn at exactly the body's own reach so the halo shows where the pull
+    // reaches — which is why a sun's halo is visibly tighter than a planet's of the same size
+    const reach = fieldReach(p);
+    const g = ctx.createRadialGradient(p.x,p.y,p.r*0.2,p.x,p.y,reach);
+    g.addColorStop(0,col.glow); g.addColorStop(1,'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(p.x,p.y,reach,0,6.2832); ctx.fill();
+
+    const rg = ctx.createRadialGradient(p.x-p.r*0.3,p.y-p.r*0.3,p.r*0.1,p.x,p.y,p.r);
+    rg.addColorStop(0,col.a); rg.addColorStop(1,col.b);
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.2832); ctx.fill();
+
+    if(p.type==='repulsor'){
+      ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r+6+Math.sin(flagWave*2)*3,0,6.2832); ctx.stroke();
+    }
+  }
+
+  // cup + flag
+  const cup = h.cup;
+  ctx.fillStyle = '#03040a';
+  ctx.beginPath(); ctx.arc(cup.x,cup.y,CUP_R,0,6.2832); ctx.fill();
+  ctx.strokeStyle = 'rgba(124,255,178,.9)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cup.x,cup.y,CUP_R,0,6.2832); ctx.stroke();
+  ctx.strokeStyle = '#dfe6ff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cup.x,cup.y); ctx.lineTo(cup.x,cup.y-40); ctx.stroke();
+  flagWave += dt*4;
+  const fw = Math.sin(flagWave)*3;
+  ctx.fillStyle = '#7CFFB2';
+  ctx.beginPath();
+  ctx.moveTo(cup.x,cup.y-40);
+  ctx.lineTo(cup.x+22,cup.y-34+fw);
+  ctx.lineTo(cup.x,cup.y-28);
+  ctx.fill();
+
+  // aim / trajectory preview
+  if(aiming){
+    let dx = aimStart.x - aimNow.x, dy = aimStart.y - aimNow.y;
+    let d = Math.min(Math.hypot(dx,dy), MAX_PULL);
+    const ang = Math.atan2(dy,dx);
+    const v = d*LAUNCH_K;
+    // Simulate the real thing: same substep, same friction, same collisions, so the
+    // line ends where the ball ends. Runs until the ball would stop, burn up, drop,
+    // or PREVIEW_T elapses — whichever comes first.
+    const st = {x:ball.x, y:ball.y, vx:Math.cos(ang)*v, vy:Math.sin(ang)*v};
+    const pts = [{x:st.x, y:st.y}];
+    let end = '';
+    const N = Math.round(PREVIEW_T/SUBSTEP);
+    for(let i=0;i<N;i++){
+      stepFree(st, SUBSTEP);
+      if(collideBodies(st) === 'sun'){ end='sun'; pts.push({x:st.x,y:st.y}); break; }
+      collideWalls(st);
+      if(cupPull(st, SUBSTEP)){ end='sink'; pts.push({x:st.x,y:st.y}); break; }
+      if(i%6 === 5) pts.push({x:st.x,y:st.y});
+      if(Math.hypot(st.vx,st.vy) < REST_SPEED){ end='rest'; pts.push({x:st.x,y:st.y}); break; }
+    }
+    // fade along the path: full confidence near the ball, trailing off at the horizon
+    ctx.setLineDash([4,7]); ctx.lineWidth=2;
+    for(let i=1;i<pts.length;i++){
+      ctx.strokeStyle = `rgba(102,224,255,${(0.85 - 0.6*(i/pts.length)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.moveTo(pts[i-1].x, pts[i-1].y);
+      ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // mark the outcome: where it settles, or what it runs into
+    const last = pts[pts.length-1];
+    if(end==='rest' || end==='sink'){
+      ctx.strokeStyle = end==='sink' ? 'rgba(124,255,178,.9)' : 'rgba(102,224,255,.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(last.x, last.y, end==='sink'?7:5, 0, 6.2832); ctx.stroke();
+    } else if(end==='sun'){
+      ctx.strokeStyle='rgba(255,107,139,.9)'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(last.x-5,last.y-5); ctx.lineTo(last.x+5,last.y+5);
+      ctx.moveTo(last.x+5,last.y-5); ctx.lineTo(last.x-5,last.y+5);
+      ctx.stroke();
+    }
+    // power arrow
+    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ball.x,ball.y);
+    ctx.lineTo(ball.x-Math.cos(ang)*d, ball.y-Math.sin(ang)*d); ctx.stroke();
+    // power meter ring
+    ctx.strokeStyle=`hsl(${140-140*(d/MAX_PULL)},90%,60%)`; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(ball.x,ball.y,13,-1.57,-1.57+6.2832*(d/MAX_PULL)); ctx.stroke();
+  }
+
+  // ball
+  if(!sunk || true){
+    ctx.save();
+    ctx.shadowColor='rgba(160,200,255,.9)'; ctx.shadowBlur=12;
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(ball.x,ball.y,BALL_R,0,6.2832); ctx.fill();
+    ctx.restore();
+    // motion trail
+    const sp = speed(ball);
+    if(sp>40){
+      ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(ball.x,ball.y);
+      ctx.lineTo(ball.x-ball.vx*0.05, ball.y-ball.vy*0.05); ctx.stroke();
+    }
+  }
+
+  // confetti
+  for(const c of confetti){
+    ctx.globalAlpha = Math.max(0,c.life);
+    ctx.fillStyle = c.c;
+    ctx.fillRect(c.x, c.y, c.r, c.r);
+  }
+  ctx.globalAlpha = 1;
+
+  // "at rest, ready" indicator
+  if(!sunk && ballAtRest() && !aiming){
+    ctx.strokeStyle='rgba(102,224,255,.4)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(ball.x,ball.y,13+Math.sin(flagWave*2)*2,0,6.2832); ctx.stroke();
+  }
+}
+
+// ---------- loop ----------
+let prev = performance.now();
+function frame(now){
+  let dt = (now-prev)/1000; prev = now;
+  if(dt>0.05) dt = 0.05;
+
+  if(!sunk && !aiming && (ball.captured || !ballAtRest())) stepBall(dt);
+  else if(!sunk && !aiming){
+    // settle tiny residual drift
+    ball.vx *= 0.7; ball.vy *= 0.7;
+  }
+
+  for(const c of confetti){
+    c.vy += 380*dt; c.x += c.vx*dt; c.y += c.vy*dt; c.life -= dt*0.5;
+  }
+  confetti = confetti.filter(c=>c.life>0);
+
+  if(hintTimer>0){ hintTimer -= dt; if(hintTimer<=0)
+    document.getElementById('hint').textContent =
+      'Drag back from the ball and release to putt. Planets pull — use them.'; }
+
+  draw(dt);
+  requestAnimationFrame(frame);
+}
+
+// ---------- course audit ----------
+// Since gravity became a finite well, a body further than FIELD_R radii from a hole's
+// tee->cup line exerts nothing on the direct route and reads as scenery — that is how
+// the old layout of hole 5 ended up with two inert planets. A thin margin is the subtler trap:
+// it works today, but any later change to FIELD_R or a radius kills it silently.
+//
+// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Two
+// standing exceptions: hole 7's planet sits 183px out against a 184px reach, yet the hole
+// plays fine because the real route curves out around the repulsor first; and hole 9's sun
+// reports no pull on the direct line by design — its job is to close the bottom lane, which
+// is off the direct route, and the planet stacked above it covers the line itself.
+const AUDIT_THIN = 20;              // px of margin below which a body is worth a look
+function auditCourse(){
+  const rows = [];
+  HOLES.forEach((h,i) => {
+    const ax=h.tee.x, ay=h.tee.y, bx=h.cup.x, by=h.cup.y;
+    const L2 = (bx-ax)*(bx-ax) + (by-ay)*(by-ay);
+    h.planets.forEach(p => {
+      let t = ((p.x-ax)*(bx-ax) + (p.y-ay)*(by-ay)) / L2;
+      t = Math.max(0, Math.min(1, t));
+      const dist  = Math.hypot(p.x-(ax+t*(bx-ax)), p.y-(ay+t*(by-ay)));
+      const reach = fieldReach(p);
+      const margin = reach - dist;
+      rows.push({
+        hole:i+1, type:p.type, r:p.r, at:`(${p.x},${p.y})`,
+        dist:Math.round(dist), reach:Math.round(reach), margin:Math.round(margin),
+        status: margin < 0 ? 'no pull on the direct line'
+              : margin < AUDIT_THIN ? 'thin margin' : 'ok'
+      });
+    });
+  });
+  return rows;
+}
+
+if(location.hash === '#debug'){
+  const flagged = auditCourse().filter(r => r.status !== 'ok');
+  if(flagged.length){
+    console.warn(`gravity-golf: ${flagged.length} of ${auditCourse().length} bodies flagged — gg.audit() for the table`);
+    console.table(flagged);
+  }
+  // Sections are derived from each hole's bodies, but their ORDER in HOLES is hand
+  // maintained. Out of order, the section chip would walk backwards mid-round and a
+  // section-complete card would fire twice for the same section.
+  const outOfOrder = [];
+  for(let i=1;i<HOLES.length;i++){
+    if(holeSection(HOLES[i]) < holeSection(HOLES[i-1]))
+      outOfOrder.push(`hole ${i+1} (${SECTIONS[holeSection(HOLES[i])].name}) follows ` +
+                      `hole ${i} (${SECTIONS[holeSection(HOLES[i-1])].name})`);
+  }
+  if(outOfOrder.length)
+    console.warn('gravity-golf: holes out of section order — ' + outOfOrder.join('; '));
+
+  window.gg = {
+    audit: auditCourse,
+    sections: () => HOLES.map((h,i) => ({hole:i+1, par:h.par,
+      section: SECTIONS[holeSection(h)].name,
+      bodies: h.planets.map(p=>p.type).join('+'), sectionEnd: isSectionEnd(i)})),
+    get ball(){ return ball; },
+    get state(){ return {holeIdx, section:SECTIONS[holeSection(HOLES[holeIdx])].name, strokes, totalToPar:toPar(), scores, reached, sunk, atRest:ballAtRest()}; },
+    putt(vx,vy){ ball.vx=vx; ball.vy=vy; strokes++; restPos={x:ball.x,y:ball.y}; syncHUD(); },
+    load: loadHole,
+    sim(sec){ let n=Math.round(sec/0.016); for(let i=0;i<n && !sunk;i++) stepBall(0.016); return {x:ball.x,y:ball.y,v:speed(ball),sunk,strokes,captured:ball.captured,atRest:ballAtRest()&&!ball.captured}; }
+  };
+}
+
+// ---------- start screen ----------
+// Start clears the scorecard and tees up hole 1; Continue picks up at the furthest
+// hole reached, and only appears when there is progress to pick up.
+const startEl = document.getElementById('start');
+document.getElementById('st-start').onclick = () => {
+  newGame();
+  startEl.style.display = 'none';
+};
+document.getElementById('st-cont').onclick = () => {
+  loadHole(reached);
+  startEl.style.display = 'none';
+};
+
+loadProgress();
+buildSelector();
+// hole 1 loads behind the card so the board is alive under it; loadHole(0) cannot
+// lower `reached`, so this does not disturb what Continue would resume.
+loadHole(0);
+if(hadSave && (reached > 0 || scores.some(v => v != null)))
+  document.getElementById('st-cont').hidden = false;
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
