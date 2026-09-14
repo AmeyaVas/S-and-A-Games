@@ -91,9 +91,21 @@
   #start h2 b{color:var(--accent)}
   #start p{color:var(--muted); margin-bottom:22px}
   #start .row{display:flex; gap:8px; justify-content:center}
+  /* Back to the landing page. Pinned to the same corner as Castle Defense's, and above
+     the title card (z-index 10) so it works before a round starts too. */
+  .back{
+    position:fixed; top:16px; left:16px; z-index:20;
+    font-size:12px; font-weight:600; line-height:1; letter-spacing:.04em;
+    padding:7px 11px; border-radius:8px; text-decoration:none;
+    background:var(--panel); color:var(--muted); border:1px solid #1e2440;
+  }
+  .back:hover, .back:focus-visible{color:var(--accent); border-color:var(--accent); outline:none}
+  /* On narrow screens the centred title would run under the link, so drop the page below it. */
+  @media (max-width:520px){ body{padding-top:56px} }
 </style>
 </head>
 <body>
+  <a class="back" href="../index.html">&larr; All games</a>
   <h1>Gravity <b>Golf</b></h1>
 
   <div id="hud">
