@@ -11,6 +11,33 @@ body {
   background: #16110c;
   font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
   color: #e8d9b5;
+  /* keeps a strip clear along the top so the back link never sits over the board */
+  padding-top: 44px;
+}
+
+/* Back to the landing page. Same corner and size as Gravity Golf's. */
+.back {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  letter-spacing: 1px;
+  padding: 7px 11px;
+  border: 1px solid #1c1712;
+  border-radius: 3px;
+  background: #2a1f16;
+  box-shadow: inset 0 0 0 1px #4a3524;
+  color: #b89a6b;
+  text-decoration: none;
+}
+
+.back:hover, .back:focus-visible {
+  color: #d4af37;
+  outline: 2px solid #d4af37;
+  outline-offset: 1px;
 }
 
 #app {
