@@ -618,10 +618,20 @@
     renderUpgradePanel();
   }
 
+  // updateStats() runs every frame during a wave. Rebuilding the panel each time
+  // replaces the buttons mid-press, so clicks never land. Only touch the DOM when
+  // the markup or the tower it is bound to has actually changed.
+  let renderedPanelHtml = null;
+  let renderedPanelTower = null;
+
   function renderUpgradePanel() {
     const tower = state.selectedTower;
     if (!tower) {
-      upgradePanelEl.innerHTML = '<p class="muted">Click a placed tower to upgrade it.</p>';
+      const html = '<p class="muted">Click a placed tower to upgrade it.</p>';
+      if (renderedPanelHtml === html) return;
+      upgradePanelEl.innerHTML = html;
+      renderedPanelHtml = html;
+      renderedPanelTower = null;
       return;
     }
 
@@ -651,11 +661,17 @@
       ? `Income ${tower.income.toFixed(1)}g / ${tower.type.incomeInterval}s`
       : `DMG ${tower.damage.toFixed(0)} &middot; SPD ${(1 / tower.fireRate).toFixed(1)}/s &middot; RNG ${tower.range.toFixed(0)}`;
 
-    upgradePanelEl.innerHTML = `
+    const html = `
       <div class="upgrade-tower-name">${tower.type.name} <span class="upgrade-cell">(${tower.col}, ${tower.row})</span></div>
       <div class="upgrade-stats-line">${statsLine}</div>
       ${rows}
     `;
+    // The click handlers close over `tower`, so a different tower with identical
+    // markup (same cell after a restart) still needs a fresh render.
+    if (renderedPanelHtml === html && renderedPanelTower === tower) return;
+    upgradePanelEl.innerHTML = html;
+    renderedPanelHtml = html;
+    renderedPanelTower = tower;
 
     for (const btn of upgradePanelEl.querySelectorAll('.upgrade-btn')) {
       btn.addEventListener('click', () => {
