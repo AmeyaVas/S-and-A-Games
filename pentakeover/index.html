@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pentakeover</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="topbar">
+    <a class="back" href="../index.html">&larr; Games</a>
+    <div class="brand">PENTA<span>KEOVER</span></div>
+    <div id="turnInfo" class="turn-info">
+      <span id="roundLabel" class="round">Round 1</span>
+      <span id="factionChip" class="chip">—</span>
+    </div>
+    <div id="stats" class="stats">
+      <div class="stat"><label>Gold</label><b id="statGold">0</b></div>
+      <div class="stat"><label>Income</label><b id="statIncome">0</b></div>
+      <div class="stat"><label>Regions</label><b id="statRegions">0</b></div>
+      <div class="stat"><label>Citadels</label><b id="statCitadels">0/5</b></div>
+    </div>
+    <div class="topbtns">
+      <button id="btnCodex" class="ghost" type="button">Codex</button>
+      <button id="btnNew" class="ghost" type="button">New Game</button>
+      <button id="btnEnd" class="primary" type="button">End Turn <kbd>Space</kbd></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="mapWrap">
+      <canvas id="map"></canvas>
+      <div id="banner" class="banner" hidden></div>
+    </div>
+
+    <aside id="sidebar">
+      <section id="regionPanel" class="panel">
+        <h2 id="regionName">No region selected</h2>
+        <p id="regionHint" class="hint">Click a region on the map to inspect it.</p>
+        <dl id="regionFacts" class="facts" hidden>
+          <div><dt>Owner</dt><dd id="factOwner">—</dd></div>
+          <div><dt>Terrain</dt><dd id="factTerrain">—</dd></div>
+          <div><dt>Income</dt><dd id="factIncome">—</dd></div>
+          <div><dt>Defence</dt><dd id="factDefence">—</dd></div>
+        </dl>
+      </section>
+
+      <section id="garrisonPanel" class="panel" hidden>
+        <h3>Garrison <span id="garrisonCount" class="muted"></span></h3>
+        <div id="unitList" class="unit-list"></div>
+        <div id="selectionBar" class="selection-bar" hidden>
+          <span id="selectionText"></span>
+          <div class="selbtns">
+            <button id="btnSelectAll" class="tiny" type="button">All</button>
+            <button id="btnSelectNone" class="tiny" type="button">None</button>
+          </div>
+        </div>
+        <div id="orderBar" class="order-bar" hidden>
+          <button id="btnMove" class="order" type="button">Move / Attack</button>
+          <button id="btnBombard" class="order" type="button">Bombard</button>
+          <button id="btnRedeploy" class="order" type="button">Redeploy</button>
+        </div>
+        <p id="orderHint" class="hint" hidden></p>
+      </section>
+
+      <section id="forecastPanel" class="panel forecast" hidden>
+        <h3>Battle forecast</h3>
+        <div class="forecast-row">
+          <div class="side att"><label>Attack</label><b id="fcAtt">0</b></div>
+          <div class="odds"><b id="fcOdds">—</b><label>win chance</label></div>
+          <div class="side def"><label>Defence</label><b id="fcDef">0</b></div>
+        </div>
+        <div class="fcbar"><span id="fcBarFill"></span></div>
+        <p id="fcNote" class="hint"></p>
+      </section>
+
+      <section id="recruitPanel" class="panel" hidden>
+        <h3>Recruit <span class="muted">— muster point</span></h3>
+        <div id="recruitList" class="recruit-list"></div>
+      </section>
+
+      <section class="panel log-panel">
+        <h3>Dispatches</h3>
+        <div id="log" class="log"></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div id="overlayCard" class="overlay-card"></div>
+</div>
+
+<script src="units.js"></script>
+<script src="map.js"></script>
+<script src="game.js"></script>
+<script src="ai.js"></script>
+<script src="render.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

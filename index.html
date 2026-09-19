@@ -5,12 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>S &amp; A Games</title>
 <style>
-  /* The two games are committed dark themes in opposite styles — sci-fi sans and
-     medieval serif. This page stays neutral dark and lets each card carry its own
-     game's palette and typeface, so it reads as a cabinet housing two machines
-     rather than picking a winner between them. */
+  /* The games are committed dark themes in different styles — sci-fi sans,
+     medieval serif, campaign-map slate. This page stays neutral dark and lets each
+     card carry its own game's palette and typeface, so it reads as a cabinet
+     housing several machines rather than picking a winner between them.
+     Geometry is deliberately NOT per-game: every card shares one radius, art
+     height and internal rhythm, so the shelf reads as a matched set and only the
+     colour changes between slots. */
   :root{
     --bg:#0a0a0f; --ink:#e9ebf2; --muted:#8b90a3; --line:#1e2030;
+    --r:10px;          /* one card radius for the whole shelf */
+    --art-h:112px;     /* one motif height for the whole shelf */
   }
   *{box-sizing:border-box; margin:0; padding:0}
   body{
@@ -19,7 +24,7 @@
     font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     display:flex; align-items:center; justify-content:center; padding:clamp(16px,4vw,48px);
   }
-  main{width:100%; max-width:900px}
+  main{width:100%; max-width:1080px}
 
   header{text-align:center; margin-bottom:clamp(28px,5vw,44px)}
   h1{
@@ -29,8 +34,10 @@
   h1 span{color:var(--muted); font-weight:300}
   .tagline{color:var(--muted); margin-top:14px; font-size:clamp(14px,2.4vw,16px)}
 
-  .shelf{display:grid; grid-template-columns:1fr 1fr; gap:clamp(16px,3vw,24px)}
-  @media (max-width:700px){ .shelf{grid-template-columns:1fr} }
+  /* Three across or one across — never two, which would strand the third
+     card alone on a half-empty row. */
+  .shelf{display:grid; gap:clamp(16px,3vw,24px); grid-template-columns:repeat(3,1fr)}
+  @media (max-width:880px){ .shelf{grid-template-columns:1fr} }
 
   /* Each card is one block-level link, so the whole tile is the hit area. */
   .game{
@@ -45,13 +52,15 @@
   .game:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 
   /* A small pure-CSS motif per game, standing in for a screenshot. */
-  .art{height:104px; border-bottom:1px solid var(--edge)}
+  .art{height:var(--art-h); border-bottom:1px solid var(--edge)}
   .body{padding:20px 22px 24px; display:flex; flex-direction:column; gap:10px; flex:1}
   .kicker{
     font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--accent);
   }
   .game h2{font-size:22px; font-weight:700; letter-spacing:var(--h2ls)}
-  .pitch{color:var(--dim); font-size:14px}
+  /* Two rendered lines (14px x 1.5), so a one-line pitch still reserves the
+     same space and every card's bullet list starts on the same baseline. */
+  .pitch{color:var(--dim); font-size:14px; min-height:3em}
   ul{list-style:none; display:flex; flex-direction:column; gap:5px; margin-top:2px}
   li{color:var(--dim); font-size:13px; padding-left:14px; position:relative}
   li::before{content:""; position:absolute; left:0; top:.5em;
@@ -62,7 +71,7 @@
   /* Gravity Golf — deep space, cyan, soft radii, system sans. */
   .gg{
     --panel:#0d1020; --edge:#1e2440; --accent:#66e0ff; --dim:#8a91b4;
-    --r:14px; --h2ls:.02em;
+    --h2ls:.02em;
   }
   .gg .art{
     background:
@@ -78,7 +87,7 @@
   /* Castle Defense — brown and gold, sharp radii, Georgia serif, battlement strip. */
   .cd{
     --panel:#16110c; --edge:#3a2a1a; --accent:#d4af37; --dim:#c9b48c;
-    --r:3px; --h2ls:.04em;
+    --h2ls:.04em;
     font-family:Georgia,"Palatino Linotype","Book Antiqua",serif;
   }
   .cd .art{
@@ -88,6 +97,21 @@
       #3f6b2f;
   }
   .cd .kicker{letter-spacing:.16em}
+
+  /* Pentakeover — cold slate and gold, three territories split by borders
+     with a citadel burning in the middle. */
+  .pk{
+    --panel:#0e131a; --edge:#2b3644; --accent:#ffd76a; --dim:#9fb0c2;
+    --h2ls:.06em;
+  }
+  .pk .art{
+    background:
+      radial-gradient(circle at 50% 47%, #ffd76a 0 4px, #ffd76a55 5px 11px, transparent 12px),
+      linear-gradient(112deg, transparent 0 45.6%, #0c1016 45.6% 46.6%, transparent 46.6%),
+      linear-gradient(68deg,  transparent 0 60.6%, #0c1016 60.6% 61.6%, transparent 61.6%),
+      linear-gradient(196deg, transparent 0 54.6%, #0c1016 54.6% 55.6%, transparent 55.6%),
+      linear-gradient(135deg, #6e2f2b 0 34%, #24506f 34% 67%, #2c5c3f 67% 100%);
+  }
 
   footer{
     margin-top:clamp(26px,4vw,38px); text-align:center; color:var(--muted);
@@ -106,7 +130,7 @@
   <header>
     <h1>S <span>&amp;</span> A Games</h1>
     <p class="tagline">
-      Two browser games, built from scratch. No install, no build step,
+      Three browser games, built from scratch. No install, no build step,
       no dependencies &mdash; pick one and play.
     </p>
   </header>
@@ -139,6 +163,21 @@
           <li>Chunky pixel-art rendering, drawn low and scaled up</li>
         </ul>
         <p class="cta">Play Castle Defense</p>
+      </div>
+    </a>
+
+    <a class="game pk" href="pentakeover/index.html">
+      <div class="art" aria-hidden="true"></div>
+      <div class="body">
+        <p class="kicker">Turn-based strategy</p>
+        <h2>Pentakeover</h2>
+        <p class="pitch">Five unit types, five factions, five citadels to hold.</p>
+        <ul>
+          <li>Procedural territory map, different every seed</li>
+          <li>Counter triangle, terrain and supply lines to work around</li>
+          <li>Play the computer at three levels, or hotseat a friend</li>
+        </ul>
+        <p class="cta">Play Pentakeover</p>
       </div>
     </a>
   </div>

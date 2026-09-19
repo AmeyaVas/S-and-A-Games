@@ -1,6 +1,6 @@
 # S & A Games
 
-Two browser games in one repo. Neither has a build step, a package manager, or a
+Three browser games in one repo. None has a build step, a package manager, or a
 single dependency — every game is plain HTML, CSS and JavaScript, and runs by
 opening a file.
 
@@ -8,9 +8,11 @@ opening a file.
 |---|---|
 | [**Gravity Golf**](gravity-golf/) | Slingshot mini-golf played through real gravity. Planets pull, suns burn, repulsors push. 9 hand-made holes in three sections. |
 | [**Castle Defense**](tower-defense/) | Pixel-art tower defense. Four upgradable turret types, a boss every tenth wave, 100 waves to survive. |
+| [**Pentakeover**](pentakeover/) | Turn-based territory conquest. Five unit types, five factions, five citadels on a procedural map. Computer opponents or hotseat. |
 
 Each game has its own README with full instructions:
-[Gravity Golf](gravity-golf/README.md) · [Castle Defense](tower-defense/README.md).
+[Gravity Golf](gravity-golf/README.md) · [Castle Defense](tower-defense/README.md) ·
+[Pentakeover](pentakeover/README.md).
 
 ## Playing
 
@@ -22,7 +24,7 @@ open  gravity-golf/index.html    # macOS
 xdg-open gravity-golf/index.html # Linux
 ```
 
-To serve both games from one place, the way GitHub Pages does, run a static
+To serve every game from one place, the way GitHub Pages does, run a static
 server at the repo root and use the landing page:
 
 ```sh
@@ -37,25 +39,26 @@ on it. See [its README](gravity-golf/README.md) for the details.
 
 ```
 .
-├─ index.html         landing page linking to both games
+├─ index.html         landing page linking to every game
 ├─ gravity-golf/      Gravity Golf, self-contained
-└─ tower-defense/     Castle Defense, self-contained
+├─ tower-defense/     Castle Defense, self-contained
+└─ pentakeover/       Pentakeover, self-contained
 ```
 
-Each game owns its folder completely and shares no code with the other. That is
-deliberate: both happen to draw to a canvas and track a score, but they are free
-to diverge, and a shared helper only earns its place once the same thing has
+Each game owns its folder completely and shares no code with the others. That is
+deliberate: they all happen to draw to a canvas and track a score, but they are
+free to diverge, and a shared helper only earns its place once the same thing has
 actually been written twice.
 
-The repo root holds the config both games share:
+The repo root holds the config the games share:
 
 - **`.gitattributes`** pins every text file to LF in the repository and on
   checkout, so the tree looks identical on Windows, macOS and Linux.
-- **`.gitignore`** covers both folders at any depth.
+- **`.gitignore`** covers every game folder at any depth.
 
 ## Working on it
 
-Both games' full histories are preserved here. Gravity Golf's is the trunk;
+Gravity Golf's and Castle Defense's full histories are preserved here. Gravity Golf's is the trunk;
 Castle Defense's was grafted in with `git subtree`, every commit keeping its
 original author.
 
