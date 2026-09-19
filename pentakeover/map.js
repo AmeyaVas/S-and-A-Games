@@ -217,7 +217,45 @@ function generateMap(opts) {
   }
 
   connectIslands(regions);
+  assignGridRefs(regions);
   return { regions, bounds };
+}
+
+/* Map references, the way a chart labels ground: a letter for the north-south
+ * band you are in, a number for how far down that band you sit. Neighbouring
+ * regions get neighbouring references, so a dispatch about D3 tells you roughly
+ * where the fighting is before you go looking for it.
+ *
+ * Numbering within a band rather than across a fixed row grid is what keeps
+ * every reference unique — two regions can share a band, but never a place in
+ * its running order. I and O are skipped, as charts skip them, so the letter is
+ * never mistaken for a 1 or a 0. */
+function assignGridRefs(regions) {
+  if (regions.length === 0) return;
+  const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+  // Bands sized so a typical map comes out roughly square in the hand: about as
+  // many bands across as there are regions deep in each one.
+  const cols = Math.max(2, Math.min(LETTERS.length,
+    Math.round(Math.sqrt((regions.length * MAP_W) / MAP_H))));
+
+  let minX = Infinity, maxX = -Infinity;
+  for (const r of regions) {
+    if (r.centroid.x < minX) minX = r.centroid.x;
+    if (r.centroid.x > maxX) maxX = r.centroid.x;
+  }
+  const span = Math.max(maxX - minX, 1e-6);
+
+  const bands = Array.from({ length: cols }, () => []);
+  for (const r of regions) {
+    const t = (r.centroid.x - minX) / span;
+    bands[Math.min(cols - 1, Math.floor(t * cols))].push(r);
+  }
+
+  bands.forEach((band, i) => {
+    band.sort((a, b) => a.centroid.y - b.centroid.y || a.id - b.id);
+    band.forEach((r, j) => { r.grid = LETTERS[i] + (j + 1); });
+  });
 }
 
 /* The continent must be one connected landmass, or a faction can be walled
@@ -286,5 +324,5 @@ function spreadPick(regions, n, anchorsIn, filter) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { generateMap, spreadPick, mulberry32, MAP_W, MAP_H };
+  module.exports = { generateMap, spreadPick, mulberry32, assignGridRefs, MAP_W, MAP_H };
 }

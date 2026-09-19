@@ -95,7 +95,7 @@
       </div>
       <!-- The overlay covers the top bar's own back link on first load, so the
            way out of the game has to be repeated in here. -->
-      <p class="ovback"><a href="../index.html">&larr; Back to games</a></p>`, false);
+      <p class="ovback"><a href="../index.html">&larr; All games</a></p>`, false);
 
     $('overlayCard').addEventListener('change', e => {
       if (e.target.classList.contains('role')) {
@@ -321,7 +321,7 @@
         <button id="btnGuideCodex" class="ghost" type="button">Unit codex</button>
         <button id="btnGuidePlay" class="primary big" type="button">Start a game</button>
       </div>
-      <p class="ovback"><a href="../index.html">&larr; Back to games</a></p>`, true);
+      <p class="ovback"><a href="../index.html">&larr; All games</a></p>`, true);
 
     $('btnGuidePlay').addEventListener('click', () => { markGuideSeen(); showSetup(); });
     $('btnGuideCodex').addEventListener('click', () => showCodex(showHowToPlay));

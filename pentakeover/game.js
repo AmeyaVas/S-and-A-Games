@@ -381,19 +381,10 @@ function redeploy(state, from, to, units, fid) {
 
 function regionLabel(region) {
   const suffix = region.kind === 'citadel' ? ' Citadel' : region.kind === 'capital' ? ' Seat' : '';
-  return REGION_NAMES[region.id % REGION_NAMES.length] + suffix;
+  // Maps built before grid references existed, and any region assembled by hand
+  // in a test, still need something to be called.
+  return (region.grid || 'R' + region.id) + suffix;
 }
-
-const REGION_NAMES = [
-  'Ashfen', 'Brackmoor', 'Caldrith', 'Dunhollow', 'Eldreach', 'Farrowdeep', 'Grimsale',
-  'Hallowmere', 'Ironvale', 'Jarrowick', 'Kestrelmoor', 'Lorncrag', 'Mirefold', 'Northwatch',
-  'Oakmantle', 'Pyrehill', 'Quarrowfen', 'Ravensmarch', 'Stonereach', 'Thornwilde', 'Umberdale',
-  'Vellmark', 'Westhollow', 'Xandmoor', 'Yarrowgate', 'Zephyrholt', 'Amberfall', 'Blackreed',
-  'Coldharrow', 'Drakemoor', 'Emberwick', 'Fallowgate', 'Greyspire', 'Highmarrow', 'Ilexwood',
-  'Jettlemoor', 'Karrowdeep', 'Lantervale', 'Mossbarrow', 'Nettlerun', 'Oldhaven', 'Palefen',
-  'Quillhollow', 'Redmarch', 'Saltcrag', 'Tallowmere', 'Underhill', 'Vexmoor', 'Wraithfen',
-  'Yewbridge', 'Zenmarch', 'Ashenford', 'Bellowdeep', 'Crowmantle', 'Dimwater', 'Elmgard'
-];
 
 function logMsg(state, text, tone, fid) {
   state.log.push({ text, tone: tone || 'info', fid: fid === undefined ? null : fid, round: state.round });
