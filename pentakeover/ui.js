@@ -89,6 +89,7 @@
       </div>
       <p id="setupWarn" class="ovwarn" hidden></p>
       <div class="ovbtns">
+        <button id="btnGuide2" class="ghost" type="button">How to play</button>
         <button id="btnCodex2" class="ghost" type="button">Read the codex</button>
         <button id="btnStart" class="primary big" type="button">Begin the war</button>
       </div>
@@ -107,7 +108,8 @@
       s.dispatchEvent(new Event('change', { bubbles: true }));
     });
     $('btnStart').addEventListener('click', startFromSetup);
-    $('btnCodex2').addEventListener('click', showCodex);
+    $('btnGuide2').addEventListener('click', showHowToPlay);
+    $('btnCodex2').addEventListener('click', () => showCodex(showSetup));
   }
 
   function startFromSetup() {
@@ -170,7 +172,165 @@
 
   function closeOverlay() { $('overlay').hidden = true; }
 
-  function showCodex() {
+  /* ---------- how to play ---------- */
+
+  // Shown once, the first time someone opens the game. After that it is a
+  // button, not a gate. Storage can be unavailable on file:// pages, in which
+  // case the guide simply greets every visit — no worse than not having it.
+  const GUIDE_KEY = 'pentakeover.guideSeen';
+
+  function guideSeen() {
+    try { return localStorage.getItem(GUIDE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function markGuideSeen() {
+    try { localStorage.setItem(GUIDE_KEY, '1'); } catch (e) { /* nothing to do */ }
+  }
+
+  function counterTriangle() {
+    return `
+      <svg class="tri" viewBox="0 0 340 210" role="img"
+           aria-label="Lancer beats Ballista, Ballista beats Warden, Warden beats Lancer">
+        <defs>
+          <marker id="pkArrow" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#ffd76a"></path>
+          </marker>
+        </defs>
+        <g stroke="#ffd76a" stroke-width="2" fill="none" marker-end="url(#pkArrow)">
+          <path d="M193 65 L261 133"></path>
+          <path d="M256 160 L90 160"></path>
+          <path d="M75 137 L143 69"></path>
+        </g>
+        <g font-size="10" fill="#8ca0b6" font-style="italic">
+          <text x="250" y="95">beats</text>
+          <text x="173" y="151" text-anchor="middle">beats</text>
+          <text x="90" y="99" text-anchor="end">beats</text>
+        </g>
+        <g stroke="#4d6076" stroke-width="1.5" fill="#1a222c">
+          <circle cx="170" cy="42" r="30"></circle>
+          <circle cx="288" cy="160" r="30"></circle>
+          <circle cx="52" cy="160" r="30"></circle>
+        </g>
+        <g text-anchor="middle" font-family="ui-monospace, Consolas, monospace">
+          <text x="170" y="42" font-size="15" font-weight="700" fill="#dfe6ee">L</text>
+          <text x="170" y="56" font-size="8.5" fill="#8ca0b6">Lancer</text>
+          <text x="288" y="160" font-size="15" font-weight="700" fill="#dfe6ee">B</text>
+          <text x="288" y="174" font-size="8.5" fill="#8ca0b6">Ballista</text>
+          <text x="52" y="160" font-size="15" font-weight="700" fill="#dfe6ee">W</text>
+          <text x="52" y="174" font-size="8.5" fill="#8ca0b6">Warden</text>
+        </g>
+      </svg>`;
+  }
+
+  function legend() {
+    const star = `<svg width="22" height="22" viewBox="0 0 22 22"><polygon
+      points="11,2 13,8.5 19.5,8.5 14.2,12.5 16.2,19 11,15 5.8,19 7.8,12.5 2.5,8.5 9,8.5"
+      fill="#ffd76a" stroke="rgba(40,28,0,.8)" stroke-width="1"/></svg>`;
+    const crown = `<svg width="22" height="22" viewBox="0 0 22 22"><path
+      d="M3,16 L3,9 L6.5,12.5 L9,6 L11,12 L13,6 L15.5,12.5 L19,9 L19,16 Z"
+      fill="#c9d2dc" stroke="rgba(10,14,18,.85)" stroke-width="1"/></svg>`;
+    const chip = `<svg width="30" height="22" viewBox="0 0 30 22"><rect x="2" y="4" width="26"
+      height="15" rx="4" fill="rgba(8,11,15,.9)" stroke="#d2463f" stroke-width="1.3"/>
+      <text x="15" y="12.5" text-anchor="middle" dominant-baseline="middle" font-size="9"
+      font-weight="700" font-family="ui-monospace, Consolas, monospace" fill="#ffd9d6">M3</text></svg>`;
+    const border = `<svg width="30" height="22" viewBox="0 0 30 22">
+      <path d="M2,3 L13,3 L13,19 L2,19 Z" fill="#5c6b4a"/>
+      <path d="M17,3 L28,3 L28,19 L17,19 Z" fill="#6e2f2b"/>
+      <path d="M15,2 L15,20" stroke="#d2463f" stroke-width="2.6"/></svg>`;
+    const bar = `<svg width="30" height="22" viewBox="0 0 30 22">
+      <rect x="2" y="9" width="26" height="4" rx="2" fill="#0b0f14"/>
+      <rect x="2" y="9" width="11" height="4" rx="2" fill="#e8c35a"/></svg>`;
+
+    return `
+      <div class="legend">
+        <div class="legend-row">${star}<span>A <b>citadel</b>. Hold all five to win.</span></div>
+        <div class="legend-row">${crown}<span>A <b>seat</b> — someone's capital. Recruiting happens here and at citadels.</span></div>
+        <div class="legend-row">${chip}<span>A <b>garrison</b>: unit letter and how many. This is three Militia.</span></div>
+        <div class="legend-row">${border}<span>A bright border is a <b>frontier</b> with someone else. Hairlines are your own seams.</span></div>
+        <div class="legend-row">${bar}<span>A bar under the chips means that stack is <b>wounded</b>. It heals when it rests.</span></div>
+      </div>`;
+  }
+
+  function showHowToPlay() {
+    openOverlay(`
+      <h1 class="ovtitle">PENTA<span>KEOVER</span></h1>
+      <p class="guide-lead">
+        You command one faction on a map of contested regions. Take ground, raise an
+        army you can afford, and either <b>hold all five citadels through a full
+        round</b> or knock every rival off the map.
+      </p>
+
+      <div class="guide">
+        <section class="gsec">
+          <h4>A turn, in order</h4>
+          <ol class="steps">
+            <li><b>Income arrives</b> automatically, minus the wages of your army.</li>
+            <li><b>Recruit</b> at your seat or any citadel you hold. New troops march next turn.</li>
+            <li><b>Give orders</b> — click one of your regions, then click a highlighted neighbour.</li>
+            <li><b>End your turn</b> and watch everyone else move.</li>
+          </ol>
+        </section>
+
+        <section class="gsec">
+          <h4>Giving orders</h4>
+          <p>Clicking a region you own picks up everything that can still move. Untick
+             anyone you want left behind, then click a highlighted region.</p>
+          <p><b>Move / Attack</b> goes into a neighbour. <b>Bombard</b> (Ballistas only)
+             shells an adjacent region without entering it and takes no return fire — but
+             never captures. <b>Redeploy</b> rails unmoved troops anywhere in your own
+             connected territory for a little gold.</p>
+          <p>Before you commit, the <b>battle forecast</b> shows your real odds and what
+             the fight is likely to cost.</p>
+        </section>
+
+        <section class="gsec">
+          <h4>The counter triangle</h4>
+          ${counterTriangle()}
+          <p>The bonus is biggest against a <b>pure</b> army and small against a mixed one,
+             so fielding a bit of everything is itself a defence.</p>
+        </section>
+
+        <section class="gsec">
+          <h4>Reading the map</h4>
+          ${legend()}
+        </section>
+
+        <section class="gsec">
+          <h4>Three things that win games</h4>
+          <p><b>Bring militia.</b> Casualties always land on your cheapest units first, so a
+             screen of militia is armour for the expensive troops behind it.</p>
+          <p><b>Respect the ground.</b> Defenders multiply their strength by terrain. A
+             citadel on hills defends at nearly double — walk cavalry into one and it dies.</p>
+          <p><b>Concentrate.</b> Two units per region everywhere means a front nobody can
+             cross. Mass a stack in one place and push there.</p>
+        </section>
+
+        <section class="gsec">
+          <h4>Keys</h4>
+          <p class="keys">
+            <span><kbd>Space</kbd> end turn</span>
+            <span><kbd>Esc</kbd> clear selection</span>
+            <span><kbd>C</kbd> unit codex</span>
+            <span><kbd>H</kbd> this page</span>
+          </p>
+          <p>Every unit's exact numbers live in the codex. You do not need them to start.</p>
+        </section>
+      </div>
+
+      <div class="ovbtns">
+        <button id="btnGuideCodex" class="ghost" type="button">Unit codex</button>
+        <button id="btnGuidePlay" class="primary big" type="button">Start a game</button>
+      </div>
+      <p class="ovback"><a href="../index.html">&larr; Back to games</a></p>`, true);
+
+    $('btnGuidePlay').addEventListener('click', () => { markGuideSeen(); showSetup(); });
+    $('btnGuideCodex').addEventListener('click', () => showCodex(showHowToPlay));
+  }
+
+  function showCodex(onBack) {
+    // `onBack` is only a function when a caller passed one; a click handler
+    // hands us an Event instead, which falls through to the default.
+    const back = typeof onBack === 'function' ? onBack : null;
     const rows = UNIT_ORDER.map(t => {
       const u = UNITS[t];
       const counter = COUNTERS[t] ? UNITS[COUNTERS[t]].name : '—';
@@ -226,8 +386,13 @@
              your cheapest paid troops desert. Recruit only at your seat and at citadels you hold.</p>
         </div>
       </div>
-      <div class="ovbtns"><button id="btnCloseCodex" class="primary" type="button">Back</button></div>`, true);
+      <div class="ovbtns">
+        <button id="btnCodexGuide" class="ghost" type="button">How to play</button>
+        <button id="btnCloseCodex" class="primary" type="button">Back</button>
+      </div>`, true);
+    $('btnCodexGuide').addEventListener('click', showHowToPlay);
     $('btnCloseCodex').addEventListener('click', () => {
+      if (back) { back(); return; }
       closeOverlay();
       if (!game) showSetup();
     });
@@ -599,6 +764,7 @@
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endHumanTurn(); }
     else if (e.key === 'Escape') { clearOrders(); sel.region = null; syncRegion(); }
     else if (e.key.toLowerCase() === 'c') showCodex();
+    else if (e.key.toLowerCase() === 'h') showHowToPlay();
   }
 
   /* ---------- boot ---------- */
@@ -636,7 +802,7 @@
     });
     $('btnSelectNone').addEventListener('click', () => { clearOrders(); syncRegion(); });
     document.addEventListener('keydown', onKey);
-    showSetup();
+    if (guideSeen()) showSetup(); else showHowToPlay();
     frame();
   });
 })();

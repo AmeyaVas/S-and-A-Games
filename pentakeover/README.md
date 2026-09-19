@@ -7,6 +7,11 @@ from the map.
 
 Open `index.html` in a browser. No build step, no dependencies.
 
+The first time you open it you get a **How to play** page covering the goal, the
+shape of a turn, the counter triangle and what the marks on the map mean. After
+that it goes straight to the faction picker, and the page is still there behind
+the *How to play* button or the `H` key.
+
 ```sh
 start index.html      # Windows
 open  index.html      # macOS
@@ -58,7 +63,8 @@ Highlighted regions are the legal targets.
   territory, for 2 gold each. This is how you concentrate an army; a front line
   where every region holds two units is a front line nobody can cross.
 
-Space or Enter ends your turn, Escape clears a selection, C opens the codex.
+Space or Enter ends your turn, Escape clears a selection, C opens the codex,
+and H reopens the how-to-play page.
 
 ## How a battle resolves
 

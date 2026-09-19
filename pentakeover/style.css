@@ -439,6 +439,85 @@ select:disabled { opacity: 0.4; }
   .codex { display: block; overflow-x: auto; }
 }
 
+/* ---------- how to play ---------- */
+
+.guide-lead {
+  margin: 0 auto 22px;
+  max-width: 620px;
+  text-align: center;
+  color: #a9b8c8;
+  line-height: 1.6;
+}
+.guide-lead b { color: #ffd76a; }
+
+.guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 18px;
+}
+
+.gsec {
+  border: 1px solid #253040;
+  border-radius: 8px;
+  background: #141c26;
+  padding: 14px 16px;
+}
+.gsec h4 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #ffd76a;
+}
+.gsec p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.55; color: #a1b0c1; }
+.gsec p:last-child { margin-bottom: 0; }
+.gsec b { color: #dfe6ee; }
+
+/* Numbered turn sequence. */
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li {
+  counter-increment: step;
+  position: relative;
+  padding: 0 0 10px 30px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #a1b0c1;
+}
+.steps li:last-child { padding-bottom: 0; }
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #222d3a;
+  color: #ffd76a;
+  font: 700 11px ui-monospace, Consolas, monospace;
+}
+
+/* Map legend — the same marks the canvas draws. */
+.legend { display: flex; flex-direction: column; gap: 9px; }
+.legend-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #a1b0c1; }
+.legend-row svg { flex: none; }
+.legend-row b { color: #dfe6ee; }
+
+.tri { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; font-size: 12.5px; color: #a1b0c1; }
+.keys span { display: inline-flex; align-items: center; gap: 6px; }
+.keys kbd {
+  margin-left: 0;
+  border-color: #33404e;
+  background: #0d131a;
+  color: #cfdae6;
+  font-size: 10px;
+  padding: 2px 5px;
+}
+
 /* ---------- phones ---------- */
 
 @media (max-width: 560px) {
