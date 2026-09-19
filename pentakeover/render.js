@@ -152,6 +152,7 @@ const Renderer = (function () {
       ctx.stroke();
     }
 
+    for (const r of state.regions) drawGridRef(r);
     for (const r of state.regions) drawMarker(state, r, glow);
     for (const r of state.regions) drawGarrison(state, r, view);
 
@@ -193,6 +194,31 @@ const Renderer = (function () {
         ctx.stroke();
       }
     }
+    ctx.restore();
+  }
+
+  /* Everything a cell stacks above its centroid hangs off this: the grid ref on
+     top, then the citadel or seat marker, then the garrison chips. A cell with
+     no marker closes the gap rather than leaving a hole where one would be. */
+  function stackTop(r) {
+    return r.centroid.y - (r.kind === 'normal' ? 19 : 33);
+  }
+
+  /* The cell's map reference. Chart annotation, not a label: dim enough to read
+     past when you are looking at the units, dark-stroked so it survives the
+     lighter terrain as well as the dark. */
+  function drawGridRef(r) {
+    if (!r.grid) return;
+    ctx.save();
+    ctx.font = 'bold 13px ui-monospace, Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(6,9,13,0.78)';
+    ctx.strokeText(r.grid, r.centroid.x, stackTop(r));
+    ctx.fillStyle = 'rgba(232,240,247,0.72)';
+    ctx.fillText(r.grid, r.centroid.x, stackTop(r));
     ctx.restore();
   }
 
@@ -296,7 +322,7 @@ const Renderer = (function () {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 10px ui-monospace, Consolas, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${n} picked`, r.centroid.x, r.centroid.y - 34);
+      ctx.fillText(`${n} picked`, r.centroid.x, stackTop(r) - 16);
     }
   }
 
