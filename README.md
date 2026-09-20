@@ -40,11 +40,14 @@ on it. See [its README](gravity-golf/README.md) for the details.
 The site is static, so hosting it is just a matter of serving the repo root —
 `index.html` is the landing page and each game lives at `/<game>/`.
 
-On Vercel, import the repository at
-[vercel.com/new](https://vercel.com/new) and deploy it with the defaults. No
-framework, build command or install command applies; `vercel.json` says so
-explicitly so the dashboard never guesses otherwise. Every push to `main`
-publishes, and every pull request gets its own preview URL.
+It is deployed on Vercel at **<https://s-and-a-games.vercel.app>**, built from
+`main`. Every push to `main` publishes; every pull request gets its own preview
+URL.
+
+Nothing is built on the way there — `vercel.json` sets the framework, build
+command and install command to none and the output directory to the repo root,
+so the dashboard serves the tree as it stands rather than inferring a preset
+and attaching a build to a project that has nothing to build.
 
 ## Layout
 
