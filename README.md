@@ -35,6 +35,20 @@ Serving over HTTP is also the more reliable way to play Gravity Golf, since some
 browsers refuse `localStorage` to `file://` pages and its saved progress depends
 on it. See [its README](gravity-golf/README.md) for the details.
 
+## Deploying
+
+The site is static, so hosting it is just a matter of serving the repo root —
+`index.html` is the landing page and each game lives at `/<game>/`.
+
+It is deployed on Vercel at **<https://s-and-a-games.vercel.app>**, built from
+`main`. Every push to `main` publishes; every pull request gets its own preview
+URL.
+
+Nothing is built on the way there — `vercel.json` sets the framework, build
+command and install command to none and the output directory to the repo root,
+so the dashboard serves the tree as it stands rather than inferring a preset
+and attaching a build to a project that has nothing to build.
+
 ## Layout
 
 ```

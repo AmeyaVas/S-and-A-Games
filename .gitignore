@@ -9,3 +9,6 @@
 /.claude/*
 !/.claude/launch.json
 !/.claude/serve.js
+
+# Vercel CLI's local project link (holds the project and org ids).
+.vercel/
