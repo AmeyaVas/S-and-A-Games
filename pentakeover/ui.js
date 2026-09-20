@@ -13,6 +13,7 @@
   let logDrawn = 0;
   let overShown = false;
   let aiSteps = 0;
+  let expandGlow = new Set();      // Free Holds the selected station could buy
 
   /* ---------- helpers ---------- */
 
@@ -244,7 +245,7 @@
     return `
       <div class="legend">
         <div class="legend-row">${star}<span>A <b>citadel</b>. Hold all five to win.</span></div>
-        <div class="legend-row">${crown}<span>A <b>seat</b> — someone's capital. Recruiting happens here and at citadels.</span></div>
+        <div class="legend-row">${crown}<span>A <b>seat</b> — someone's capital. Seats and citadels are <b>stations</b>: recruiting and expansion happen there.</span></div>
         <div class="legend-row">${chip}<span>A <b>garrison</b>: unit letter and how many. This is three Militia.</span></div>
         <div class="legend-row">${border}<span>A bright border is a <b>frontier</b> with someone else. Hairlines are your own seams.</span></div>
         <div class="legend-row">${bar}<span>A bar under the chips means that stack is <b>wounded</b>. It heals when it rests.</span></div>
@@ -265,7 +266,9 @@
           <h4>A turn, in order</h4>
           <ol class="steps">
             <li><b>Income arrives</b> automatically, minus the wages of your army.</li>
-            <li><b>Recruit</b> at your seat or any citadel you hold. New troops march next turn.</li>
+            <li><b>Recruit</b> at any station — your seat or a citadel you hold. New troops march next turn.</li>
+            <li><b>Expand</b> from a station into a neighbouring Free Hold, for gold. As many as
+                you can pay for, though each one this turn costs more than the last.</li>
             <li><b>Give orders</b> — click one of your regions, then click a highlighted neighbour.</li>
             <li><b>End your turn</b> and watch everyone else move.</li>
           </ol>
@@ -281,6 +284,28 @@
              connected territory for a little gold.</p>
           <p>Before you commit, the <b>battle forecast</b> shows your real odds and what
              the fight is likely to cost.</p>
+        </section>
+
+        <section class="gsec">
+          <h4>Moving the map</h4>
+          <p>Drag the map to slide it, and use the wheel or the <b>+</b> and <b>−</b>
+             buttons to zoom; <b>⤢</b> puts the whole continent back in view. On a
+             touch screen pinch to zoom and use <b>two fingers</b> to slide — one
+             finger scrolls the page, so a phone can always get past the map.</p>
+          <p>The grip on the map's edge resizes it: drag it sideways to trade space
+             with the sidebar, or up and down once the page has stacked.</p>
+        </section>
+
+        <section class="gsec">
+          <h4>Buying land</h4>
+          <p>Select a station and the <b>Expand</b> panel prices every unclaimed Free Hold
+             on its border; the map dashes them in gold. There is no limit but your
+             treasury — each expansion in the same turn costs
+             ${Math.round((EXPAND_STEP - 1) * 100)}% more than the one before, and the
+             tariff resets next turn.</p>
+          <p>The ground arrives <b>empty</b> — the Free Hold garrison goes home rather than
+             joining you — so walk somebody in before a rival does. Citadels and other
+             factions' land are never for sale.</p>
         </section>
 
         <section class="gsec">
@@ -383,7 +408,14 @@
         <div>
           <h4>Money</h4>
           <p>Income arrives at the start of your turn, minus upkeep. Go into the red and
-             your cheapest paid troops desert. Recruit only at your seat and at citadels you hold.</p>
+             your cheapest paid troops desert. Recruit only at your stations — your seat
+             and the citadels you hold.</p>
+        </div>
+        <div>
+          <h4>Expansion</h4>
+          <p>A station can buy an adjacent <b>Free Hold</b> outright, as many times a turn as
+             the treasury allows — but each one costs ${Math.round((EXPAND_STEP - 1) * 100)}%
+             more than the last, and the ground arrives undefended.</p>
         </div>
       </div>
       <div class="ovbtns">
@@ -461,6 +493,8 @@
       facts.hidden = true;
       garrison.hidden = true;
       recruitP.hidden = true;
+      $('expandPanel').hidden = true;
+      expandGlow = new Set();
       $('forecastPanel').hidden = true;
       return;
     }
@@ -479,10 +513,12 @@
     $('garrisonCount').textContent = r.units.length ? `· ${r.units.length}` : '';
     renderUnits(r);
 
-    // Recruiting
-    const canMuster = human() && isMusterPoint(game, r, game.current);
-    recruitP.hidden = !canMuster;
-    if (canMuster) renderRecruit(r);
+    // A station — your seat or a citadel you hold — recruits troops and buys land.
+    const atStation = human() && isStation(game, r, game.current);
+    recruitP.hidden = !atStation;
+    if (atStation) renderRecruit(r);
+    $('expandPanel').hidden = !atStation;
+    if (atStation) renderExpand(r); else expandGlow = new Set();
 
     syncForecast();
   }
@@ -567,6 +603,56 @@
       });
       list.appendChild(btn);
     }
+  }
+
+  /* Territory expansion. Every station offers the Free Holds on its own border,
+   * cheapest first, and there is no limit but the treasury: each purchase this
+   * turn raises the price of the next one. */
+  function renderExpand(station) {
+    const list = $('expandList');
+    const f = game.factions[game.current];
+    const opts = station.neighbors
+      .map(n => game.regions[n])
+      .filter(t => t.owner === null && t.kind !== 'citadel')
+      .map(t => ({ region: t, cost: expandCost(game, t, f.id) }))
+      .sort((a, b) => a.cost - b.cost);
+
+    expandGlow = new Set(opts.map(o => o.region.id));
+    list.innerHTML = '';
+
+    const hint = $('expandHint');
+    if (opts.length === 0) {
+      hint.textContent = 'No Free Holds border this station. Citadels and rival land are never for sale.';
+      return;
+    }
+
+    for (const o of opts) {
+      const t = o.region;
+      const ok = f.gold >= o.cost;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'recruit expand' + (ok ? '' : ' broke');
+      btn.disabled = !ok;
+      btn.innerHTML = `
+        <span class="uglyph">+</span>
+        <span class="rinfo">
+          <b>${regionLabel(t)}</b>
+          <small>${TERRAIN[t.terrain].name} · +${
+            TERRAIN[t.terrain].income + KIND_BONUS[t.kind].income} gold · ${
+            t.units.length} defender${t.units.length === 1 ? '' : 's'}</small>
+        </span>
+        <span class="rcost">${o.cost}g</span>`;
+      btn.addEventListener('click', () => {
+        // Stay on the station afterwards so another expansion is one click away.
+        if (expand(game, station, t, game.current)) syncAll();
+      });
+      list.appendChild(btn);
+    }
+
+    const surcharge = Math.round((Math.pow(EXPAND_STEP, f.expansions) - 1) * 100);
+    hint.textContent = f.expansions === 0
+      ? 'Buy as many as you can pay for. Each expansion this turn raises the price of the next.'
+      : `${f.expansions} bought this turn — prices are up ${surcharge}%. They reset next turn.`;
   }
 
   function syncForecast() {
@@ -730,13 +816,78 @@
 
   function onCanvasMove(e) {
     if (!game) return;
+    if (drag.panning) return;   // the window listener is doing the panning
     const r = Renderer.regionAt(game, e.clientX, e.clientY);
     const id = r ? r.id : null;
     if (id !== hover) { hover = id; syncForecast(); }
   }
 
+  /* ---------- moving and resizing the map ----------
+   *
+   * The map pans under the mouse and zooms under the wheel; on touch one finger
+   * is left alone so the page can still scroll past a map that fills a phone,
+   * and two fingers pan and pinch. A drag has to be told apart from a click,
+   * since both start with a press on a region — anything that travels more than
+   * a few pixels stops being an order and becomes a pan.
+   */
+
+  const DRAG_SLOP = 5;   // px of travel before a press stops counting as a click
+  let drag = { panning: false, moved: false, x: 0, y: 0 };
+  let pinch = null;
+
+  function beginPan(x, y) {
+    drag = { panning: true, moved: false, x, y };
+    $('map').classList.add('dragging');
+  }
+
+  function dragPanTo(x, y) {
+    const dx = x - drag.x, dy = y - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_SLOP) return;
+    drag.moved = true;
+    drag.x = x;
+    drag.y = y;
+    Renderer.panBy(dx, dy);
+  }
+
+  function endPan() {
+    drag.panning = false;
+    $('map').classList.remove('dragging');
+  }
+
+  function onCanvasWheel(e) {
+    if (!game) return;
+    e.preventDefault();
+    Renderer.zoomBy(Math.pow(0.9988, e.deltaY), e.clientX, e.clientY);
+  }
+
+  function touchMid(t) {
+    return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
+  }
+  function touchSpan(t) {
+    return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  }
+
+  function onTouchStart(e) {
+    if (e.touches.length !== 2) { pinch = null; return; }
+    const t = [e.touches[0], e.touches[1]];
+    pinch = { span: touchSpan(t), mid: touchMid(t) };
+    e.preventDefault();
+  }
+
+  function onTouchMove(e) {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    const t = [e.touches[0], e.touches[1]];
+    const span = touchSpan(t), mid = touchMid(t);
+    if (pinch.span > 0) Renderer.zoomBy(span / pinch.span, mid.x, mid.y);
+    Renderer.panBy(mid.x - pinch.mid.x, mid.y - pinch.mid.y);
+    pinch = { span, mid };
+  }
+
   function onCanvasClick(e) {
     if (!game || game.winner !== null) return;
+    // The mouse-up that ends a pan lands here too; it was not an order.
+    if (drag.moved) { drag.moved = false; return; }
     const r = Renderer.regionAt(game, e.clientX, e.clientY);
     if (!r) return;
 
@@ -754,6 +905,12 @@
   }
 
   function onKey(e) {
+    // A focused button should answer Space and Enter itself rather than ending
+    // the turn out from under whoever was tabbing through the controls, and a
+    // field being typed into owns every key — including the shortcut letters.
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (tag === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
     if (!$('overlay').hidden) {
       if (e.key === 'Escape' && $('overlayCard').dataset.dismissible === '1') {
         closeOverlay();
@@ -767,6 +924,87 @@
     else if (e.key.toLowerCase() === 'h') showHowToPlay();
   }
 
+  /* Dragging the handle on the map's trailing edge resizes the pane: the
+   * sidebar column while there is room for one, the map's own height once the
+   * layout has stacked. Both land on a custom property #main already reads. */
+  const STACKED = () => window.matchMedia('(max-width: 900px)').matches;
+  const MIN_SIDE = 260, MAX_SIDE = 560;
+  const MIN_MAP = 180;
+  let mapHPinned = false;   // true once the player has sized the map themselves
+
+  /* Stacked, a pane taller than the continent is dead space above and below it,
+   * and on a phone that is most of the screen. Give the map the height its own
+   * shape asks for until the player drags the handle and takes over. */
+  function autoMapHeight() {
+    if (mapHPinned || !STACKED()) return;
+    const w = $('mapWrap').getBoundingClientRect().width;
+    if (w <= 0) return;
+    const wanted = w * (MAP_H / MAP_W);
+    const h = Math.max(MIN_MAP, Math.min(window.innerHeight * 0.72, wanted));
+    $('main').style.setProperty('--map-h', Math.round(h) + 'px');
+  }
+
+  function startResize(e) {
+    e.preventDefault();
+    const handle = $('mapHandle');
+    const main = $('main');
+    const stacked = STACKED();
+    const startX = e.clientX, startY = e.clientY;
+    const wrap = $('mapWrap').getBoundingClientRect();
+    const startSide = $('sidebar').getBoundingClientRect().width;
+    const startMap = wrap.height;
+
+    handle.classList.add('dragging');
+    if (stacked) mapHPinned = true;
+    // Capture keeps a fast drag from escaping the 10px strip; the listeners go
+    // on the window regardless, so the drag survives if capture is refused.
+    try { handle.setPointerCapture(e.pointerId); } catch (_) { /* no capture */ }
+
+    const move = ev => {
+      if (stacked) {
+        const h = Math.max(MIN_MAP, Math.min(window.innerHeight * 1.4, startMap + (ev.clientY - startY)));
+        main.style.setProperty('--map-h', Math.round(h) + 'px');
+      } else {
+        const w = Math.max(MIN_SIDE, Math.min(MAX_SIDE, startSide - (ev.clientX - startX)));
+        main.style.setProperty('--side-w', Math.round(w) + 'px');
+      }
+      Renderer.resize();
+    };
+    const up = () => {
+      handle.classList.remove('dragging');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  /* The handle is focusable, so the arrow keys resize it too. */
+  function resizeByKey(e) {
+    const step = e.shiftKey ? 48 : 16;
+    const main = $('main');
+    const stacked = STACKED();
+    let delta = 0;
+    if (e.key === 'ArrowLeft')  delta = stacked ? 0 : +step;
+    else if (e.key === 'ArrowRight') delta = stacked ? 0 : -step;
+    else if (e.key === 'ArrowUp')    delta = stacked ? -step : 0;
+    else if (e.key === 'ArrowDown')  delta = stacked ? +step : 0;
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (stacked) {
+      mapHPinned = true;
+      const h = Math.max(MIN_MAP, $('mapWrap').getBoundingClientRect().height + delta);
+      main.style.setProperty('--map-h', h + 'px');
+    } else {
+      const w = Math.max(MIN_SIDE, Math.min(MAX_SIDE, $('sidebar').getBoundingClientRect().width + delta));
+      main.style.setProperty('--side-w', w + 'px');
+    }
+    Renderer.resize();
+  }
+
   /* ---------- boot ---------- */
 
   function frame() {
@@ -776,6 +1014,7 @@
         selected: sel.region,
         targets: sel.targets,
         targetTone: sel.tone,
+        expand: expandGlow,
         selectedUnits: sel.units
       });
     }
@@ -784,10 +1023,24 @@
 
   window.addEventListener('DOMContentLoaded', function () {
     Renderer.init($('map'));
-    window.addEventListener('resize', () => Renderer.resize());
+    autoMapHeight();
+    Renderer.resize();
+    window.addEventListener('resize', () => { autoMapHeight(); Renderer.resize(); });
     $('map').addEventListener('mousemove', onCanvasMove);
     $('map').addEventListener('mouseleave', () => { hover = null; syncForecast(); });
     $('map').addEventListener('click', onCanvasClick);
+    $('map').addEventListener('mousedown', e => { if (e.button === 0) beginPan(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => { if (drag.panning) dragPanTo(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', endPan);
+    $('map').addEventListener('wheel', onCanvasWheel, { passive: false });
+    $('map').addEventListener('touchstart', onTouchStart, { passive: false });
+    $('map').addEventListener('touchmove', onTouchMove, { passive: false });
+    $('map').addEventListener('touchend', () => { pinch = null; });
+    $('btnZoomIn').addEventListener('click', () => Renderer.zoomBy(1.35));
+    $('btnZoomOut').addEventListener('click', () => Renderer.zoomBy(1 / 1.35));
+    $('btnZoomFit').addEventListener('click', () => Renderer.resetView());
+    $('mapHandle').addEventListener('pointerdown', startResize);
+    $('mapHandle').addEventListener('keydown', resizeByKey);
     $('btnEnd').addEventListener('click', endHumanTurn);
     $('btnCodex').addEventListener('click', showCodex);
     $('btnNew').addEventListener('click', () => { stopAI(); showSetup(); });

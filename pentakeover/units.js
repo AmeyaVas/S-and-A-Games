@@ -65,6 +65,16 @@ const HOLD_LOSS = 0.85;        // share the losing side sheds at parity
 const BOMBARD_SCALE = 0.45;    // bombardment is chip damage, not a knockout
 const REDEPLOY_COST = 2;       // gold per unit railed across your own territory
 
+/* Expansion: buying a Free Hold out of its independence instead of storming it.
+ * The price is the ground's worth plus a payoff for every militiaman who has to
+ * be persuaded to go home, and it climbs steeply with each further expansion in
+ * the same turn — there is no limit on how many you may buy, only on how long
+ * your treasury holds out. */
+const EXPAND_BASE = 5;         // floor price of an annexation
+const EXPAND_PER_INCOME = 2;   // plus two turns of what the ground earns
+const EXPAND_PER_DEFENDER = 3; // plus a payoff per Free Hold soldier standing down
+const EXPAND_STEP = 1.6;       // each expansion after the first costs this much more
+
 /* Logistics: land feeds troops. Everything past your supply cap costs a gold
  * a turn each, which is what stops anyone stacking a free peasant horde. */
 const SUPPLY_BASE = 3;

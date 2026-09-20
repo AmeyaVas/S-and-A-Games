@@ -243,14 +243,72 @@ kbd {
 
 /* ---------- layout ---------- */
 
+/* Both split sizes are custom properties so the drag handle can write to them
+   from JS without touching any other rule: --side-w is the sidebar column on a
+   wide screen, --map-h the map's height once the layout stacks. */
 #main {
+  --side-w: 340px;
+  --map-h: 58vh;
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr var(--side-w);
   min-height: 0;
 }
 
 #mapWrap { position: relative; min-width: 0; }
-#map { display: block; cursor: pointer; }
+/* One finger scrolls the page, which is the only way past a map that fills a
+   phone; two fingers pan and pinch the map, and the script handles those. */
+#map { display: block; cursor: pointer; touch-action: pan-y; }
+#map.dragging { cursor: grabbing; }
+
+/* ---------- map controls ---------- */
+
+.map-tools {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+button.maptool {
+  --notch: 5px;
+  --fill: rgba(11, 16, 22, 0.88);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* The split handle. It sits on the map's trailing edge — the right one while
+   the sidebar is a column, the bottom one once the layout stacks — and draws a
+   short grip rather than a full rule so it never reads as a border. */
+.map-handle {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+}
+.map-handle span {
+  display: block;
+  width: 2px;
+  height: 34px;
+  background: var(--edge);
+  transition: background 0.12s;
+}
+.map-handle:hover span,
+.map-handle:focus-visible span,
+.map-handle.dragging span { background: var(--gold); }
+.map-handle:focus-visible { outline: none; }
 
 /* Faction colour arrives inline on the border, so this keeps a real one. */
 .banner {
@@ -452,6 +510,14 @@ button.order.active {
   font-variant-numeric: tabular-nums;
 }
 .recruit.broke .rcost { color: #7c8b9d; }
+
+/* ---------- expansion ---------- */
+
+/* Expansion rows reuse the recruit row, with a gold hairline down the left so
+   the two lists never read as one when both panels are open at a station. */
+button.recruit.expand { box-shadow: inset 2px 0 0 rgba(232, 195, 90, 0.55); }
+button.recruit.expand .uglyph { color: var(--gold); font-weight: 700; }
+button.recruit.expand.broke { box-shadow: inset 2px 0 0 rgba(232, 195, 90, 0.2); }
 
 /* ---------- log ---------- */
 
@@ -667,10 +733,34 @@ select:disabled { opacity: 0.4; }
 
 @media (max-width: 900px) {
   body { overflow: auto; }
-  #app { height: auto; }
-  #main { grid-template-columns: 1fr; }
-  #mapWrap { height: 60vh; }
-  #sidebar { border-left: none; border-top: 1px solid var(--edge); }
+  #app { height: auto; min-height: 100%; }
+  /* Stacked the two panes are rows, and they must hug their content: stretched
+     to fill a tall viewport they leave a band of nothing between the map and
+     the sidebar. */
+  #main { grid-template-columns: 1fr; grid-template-rows: auto auto; align-content: start; }
+  #mapWrap { height: var(--map-h); }
+  /* The page itself is the scroller at this width. A second scroller nested
+     inside it is a trap for a thumb, so the sidebar simply runs on and the
+     dispatches get a ceiling instead of a pane of their own. */
+  #sidebar {
+    border-left: none;
+    border-top: 1px solid var(--edge);
+    overflow-y: visible;
+  }
+  .log-panel { flex: none; min-height: 0; }
+  .log { max-height: 44vh; }
+
+  /* Stacked, the handle moves to the map's bottom edge and resizes its height. */
+  .map-handle {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: 14px;
+    cursor: row-resize;
+  }
+  .map-handle span { width: 44px; height: 2px; }
   /* No physical keyboard at this size, and dropping the hint makes all three
      top-bar buttons exactly the same width. */
   .topbtns kbd { display: none; }
@@ -768,6 +858,13 @@ select:disabled { opacity: 0.4; }
 @media (max-width: 560px) {
   .overlay { padding: 14px; }
   .overlay-card { padding: 22px 18px; }
+
+  /* Thumb-sized zoom controls, and the map keeps a floor so it never collapses
+     to a sliver on a short phone. */
+  #main { --map-h: 52vh; }
+  .map-tools { top: 10px; right: 10px; gap: 8px; }
+  button.maptool { width: 40px; height: 40px; font-size: 18px; }
+  .map-handle { height: 18px; }
 
   /* Small caps run wider than the sentence case this bar used to hold, and a
      104px floor plus the 18px flex gap no longer leaves three labels room for

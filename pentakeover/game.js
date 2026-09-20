@@ -40,7 +40,8 @@ function createGame(opts) {
     label: f.label || FACTION_PRESETS[i].name,
     alive: true,
     gold: START_GOLD,
-    capital: -1
+    capital: -1,
+    expansions: 0          // annexations bought this turn; each one raises the price
   }));
 
   // Capitals first, spread as far apart as the continent allows. Citadels then
@@ -136,7 +137,9 @@ function netIncome(state, fid) {
   return Math.round(grossIncome(state, fid) * mult) - upkeepOf(state, fid);
 }
 
-function isMusterPoint(state, region, fid) {
+/* A station: your seat or a citadel you hold. Troops muster here and territory
+ * expansions are bought from here. */
+function isStation(state, region, fid) {
   return region.owner === fid && (region.kind === 'capital' || region.kind === 'citadel');
 }
 
@@ -175,6 +178,10 @@ function beginTurn(state) {
   if (citadelsHeld(state, f.id) === CITADEL_COUNT) {
     return declareWinner(state, f.id, 'citadels');
   }
+
+  // The expansion tariff is a per-turn thing: the price resets every turn, so
+  // buying land is limited by the treasury rather than by a counter.
+  f.expansions = 0;
 
   const income = netIncome(state, f.id);
   f.gold += income;
@@ -255,7 +262,7 @@ function declareWinner(state, fid, how) {
 
 function canRecruit(state, region, fid, type) {
   const f = state.factions[fid];
-  return state.winner === null && isMusterPoint(state, region, fid) && f.gold >= UNITS[type].cost;
+  return state.winner === null && isStation(state, region, fid) && f.gold >= UNITS[type].cost;
 }
 
 function recruit(state, region, fid, type) {
@@ -265,6 +272,65 @@ function recruit(state, region, fid, type) {
   u.mp = 0;                       // mustered this turn, marches the next
   region.units.push(u);
   logMsg(state, `${state.factions[fid].label} musters a ${UNITS[type].name}.`, 'info', fid);
+  return true;
+}
+
+/* ---------- expansion ----------
+ *
+ * A station — your seat, or any citadel you hold — can buy an adjacent Free
+ * Hold out of its independence instead of storming it. There is no cap on how
+ * many you may take in a turn; the price simply climbs with each one, so the
+ * limit is what your treasury will bear.
+ *
+ * Only Free Holds are for sale. Rival land is never for sale at any price, and
+ * neither are citadels: the five regions that end the game have to be taken.
+ */
+
+function expandCost(state, region, fid) {
+  const f = state.factions[fid];
+  const worth = TERRAIN[region.terrain].income + KIND_BONUS[region.kind].income;
+  const raw = EXPAND_BASE + worth * EXPAND_PER_INCOME + region.units.length * EXPAND_PER_DEFENDER;
+  return Math.round(raw * Math.pow(EXPAND_STEP, f.expansions));
+}
+
+function canExpand(state, station, region, fid) {
+  if (state.winner !== null) return false;
+  if (!isStation(state, station, fid)) return false;
+  if (!station.neighbors.includes(region.id)) return false;
+  if (region.owner !== null) return false;              // nobody sells their own land
+  if (region.kind === 'citadel') return false;          // citadels are taken, not bought
+  return state.factions[fid].gold >= expandCost(state, region, fid);
+}
+
+/* Every Free Hold this faction could annex right now, as {region, cost} pairs,
+ * cheapest first. The UI lists them and the AI shops from the same list. */
+function expandOptions(state, fid) {
+  const out = [];
+  const seen = new Set();
+  for (const station of state.regions) {
+    if (!isStation(state, station, fid)) continue;
+    for (const n of station.neighbors) {
+      if (seen.has(n)) continue;
+      const r = state.regions[n];
+      if (r.owner !== null || r.kind === 'citadel') continue;
+      seen.add(n);
+      out.push({ station, region: r, cost: expandCost(state, r, fid) });
+    }
+  }
+  return out.sort((a, b) => a.cost - b.cost);
+}
+
+function expand(state, station, region, fid) {
+  if (!canExpand(state, station, region, fid)) return false;
+  const f = state.factions[fid];
+  const cost = expandCost(state, region, fid);
+  f.gold -= cost;
+  f.expansions++;
+  // The Free Hold garrison stands down and goes home; the ground changes hands
+  // undefended, which is the real price of taking it with coin instead of blood.
+  region.units = [];
+  region.owner = fid;
+  logMsg(state, `${f.label} expands into ${regionLabel(region)} for ${cost} gold.`, 'good', fid);
   return true;
 }
 
