@@ -1,1 +1,11 @@
+# Local Claude Code state, in any game folder at any depth.
 .claude/
+
+# The repo root's is the exception: launch.json and serve.js are shared config
+# that a fresh checkout (or a cloud session) needs to preview the games.
+# Re-include the directory, re-exclude its contents, then name the keepers —
+# git cannot re-include a file whose parent directory is excluded.
+!/.claude/
+/.claude/*
+!/.claude/launch.json
+!/.claude/serve.js
