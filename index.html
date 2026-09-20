@@ -51,7 +51,9 @@
   }
   .game:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 
-  /* A small pure-CSS motif per game, standing in for a screenshot. */
+  /* Each card's art is a real capture from its own game, cropped to this box.
+     The flat colour behind each one is that game's own backdrop, so a card that
+     is still loading reads as the game's world rather than a grey hole. */
   .art{height:var(--art-h); border-bottom:1px solid var(--edge)}
   .body{padding:20px 22px 24px; display:flex; flex-direction:column; gap:10px; flex:1}
   .kicker{
@@ -68,19 +70,17 @@
   .cta{margin-top:auto; padding-top:14px; font-size:13px; font-weight:600; color:var(--accent)}
   .cta::after{content:" \2192"}
 
-  /* Gravity Golf — deep space, cyan, soft radii, system sans. */
+  /* Gravity Golf — deep space, cyan, soft radii, system sans.
+     Art is hole 8: ball, repulsor, sun, repulsor, cup, every body sitting on the
+     one centreline, which is why this hole and not a prettier one — it is the
+     only board in the course that composes into a strip this wide. */
   .gg{
     --panel:#0d1020; --edge:#1e2440; --accent:#66e0ff; --dim:#8a91b4;
     --h2ls:.02em;
   }
   .gg .art{
     background:
-      radial-gradient(circle at 74% 62%, #66e0ff 0 5px, #66e0ff33 6px 13px, transparent 14px),
-      radial-gradient(circle at 30% 34%, #b8c4ff 0 9px, #b8c4ff26 10px 22px, transparent 23px),
-      radial-gradient(circle at 12% 76%, #fff 0 1.5px, transparent 2px),
-      radial-gradient(circle at 52% 18%, #fff 0 1.5px, transparent 2px),
-      radial-gradient(circle at 88% 26%, #fff 0 1px, transparent 2px),
-      radial-gradient(circle at 62% 86%, #fff 0 1px, transparent 2px),
+      url("gravity-golf/thumbnail.webp") center/cover no-repeat,
       #04050b;
   }
 
@@ -90,27 +90,32 @@
     --h2ls:.04em;
     font-family:Georgia,"Palatino Linotype","Book Antiqua",serif;
   }
+  /* Art is a live wave 4: archers and a cannon bastion on the left, the column
+     coming down the path on the right, two of them taking a hit. */
   .cd .art{
     background:
-      repeating-linear-gradient(90deg, #3a2a1a 0 18px, transparent 18px 36px) top/100% 26px no-repeat,
-      linear-gradient(#6b4a2e 0 3px, transparent 3px) 0 26px/100% 3px no-repeat,
+      url("tower-defense/thumbnail.webp") center/cover no-repeat,
       #3f6b2f;
   }
   .cd .kicker{letter-spacing:.16em}
 
-  /* Pentakeover — cold slate and gold, three territories split by borders
-     with a citadel burning in the middle. */
+  /* Pentakeover — cold slate and gold. The one card whose art is a real
+     screenshot rather than a CSS motif: a mid-war capture of an actual
+     generated continent (seed 20260920, round 9), cropped full-bleed to the
+     art box. The gradient behind it is the old hand-drawn motif, kept as the
+     fallback that shows if the image is still loading or fails outright, so
+     the slot is never a dead grey rectangle. */
   .pk{
     --panel:#0e131a; --edge:#2b3644; --accent:#ffd76a; --dim:#9fb0c2;
     --h2ls:.06em;
   }
   .pk .art{
     background:
-      radial-gradient(circle at 50% 47%, #ffd76a 0 4px, #ffd76a55 5px 11px, transparent 12px),
-      linear-gradient(112deg, transparent 0 45.6%, #0c1016 45.6% 46.6%, transparent 46.6%),
-      linear-gradient(68deg,  transparent 0 60.6%, #0c1016 60.6% 61.6%, transparent 61.6%),
-      linear-gradient(196deg, transparent 0 54.6%, #0c1016 54.6% 55.6%, transparent 55.6%),
-      linear-gradient(135deg, #6e2f2b 0 34%, #24506f 34% 67%, #2c5c3f 67% 100%);
+      url("pentakeover/thumbnail.webp") center/cover no-repeat,
+      linear-gradient(135deg,
+        #6e2f2b 0 33.5%, #0c1016 33.5% 34.5%,
+        #24506f 34.5% 66.5%, #0c1016 66.5% 67.5%,
+        #2c5c3f 67.5% 100%);
   }
 
   footer{
