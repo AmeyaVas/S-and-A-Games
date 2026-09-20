@@ -6,8 +6,16 @@
  * glance without needing labels.
  */
 
+const MIN_ZOOM = 1;      // fully zoomed out is the whole continent, fit to the pane
+const MAX_ZOOM = 6;
+
 const Renderer = (function () {
   let canvas, ctx, dpr = 1;
+  let paneW = 1, paneH = 1;
+  // The fit transform — the whole continent centred in the pane — and the live
+  // one, which is the fit transform with the player's zoom and pan applied.
+  let fitScale = 1, fitX = 0, fitY = 0;
+  let zoom = 1, panX = 0, panY = 0;
   let scale = 1, offX = 0, offY = 0;
   let pulse = 0;
 
@@ -20,14 +28,63 @@ const Renderer = (function () {
   function resize() {
     const rect = canvas.parentElement.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
-    scale = Math.min(rect.width / MAP_W, rect.height / MAP_H);
-    offX = (rect.width - MAP_W * scale) / 2;
-    offY = (rect.height - MAP_H * scale) / 2;
+    paneW = Math.max(1, rect.width);
+    paneH = Math.max(1, rect.height);
+    canvas.width = Math.max(1, Math.round(paneW * dpr));
+    canvas.height = Math.max(1, Math.round(paneH * dpr));
+    canvas.style.width = paneW + 'px';
+    canvas.style.height = paneH + 'px';
+    fitScale = Math.min(paneW / MAP_W, paneH / MAP_H);
+    fitX = (paneW - MAP_W * fitScale) / 2;
+    fitY = (paneH - MAP_H * fitScale) / 2;
+    applyView();
   }
+
+  /* Zoom grows the map about the pane's centre, then the pan slides it. Pan is
+   * clamped so the continent can always be dragged back: at most a quarter of
+   * the pane may be pushed past the edge of it. */
+  function applyView() {
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+    scale = fitScale * zoom;
+    const grownX = (MAP_W * fitScale * (zoom - 1)) / 2;
+    const grownY = (MAP_H * fitScale * (zoom - 1)) / 2;
+    const slackX = grownX + paneW * 0.25;
+    const slackY = grownY + paneH * 0.25;
+    panX = Math.min(slackX, Math.max(-slackX, panX));
+    panY = Math.min(slackY, Math.max(-slackY, panY));
+    offX = fitX - grownX + panX;
+    offY = fitY - grownY + panY;
+  }
+
+  /* Zoom by `factor`, keeping whatever is under (px, py) in client coordinates
+   * pinned in place. Without the anchor a wheel over the corner of the map
+   * walks the thing you were looking at off the screen. */
+  function zoomBy(factor, px, py) {
+    const before = px === undefined ? null : screenToMap(px, py);
+    zoom *= factor;
+    applyView();
+    if (before) {
+      const after = screenToMap(px, py);
+      panX += (after.x - before.x) * scale;
+      panY += (after.y - before.y) * scale;
+      applyView();
+    }
+  }
+
+  function panBy(dx, dy) {
+    panX += dx;
+    panY += dy;
+    applyView();
+  }
+
+  function resetView() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    applyView();
+  }
+
+  function getZoom() { return zoom; }
 
   function screenToMap(px, py) {
     const rect = canvas.getBoundingClientRect();
@@ -77,9 +134,9 @@ const Renderer = (function () {
 
     ctx.save();
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, paneW, paneH);
     ctx.fillStyle = '#0a0d11';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, paneW, paneH);
     ctx.translate(offX, offY);
     ctx.scale(scale, scale);
 
@@ -120,7 +177,22 @@ const Renderer = (function () {
       }
     }
 
-    // Highlights.
+    // Highlights. Free Holds a selected station could buy are dashed gold — for
+    // sale rather than ordered into, and drawn under any live order targets.
+    if (view.expand && view.expand.size) {
+      for (const id of view.expand) {
+        const r = state.regions[id];
+        tracePoly(r.poly);
+        ctx.fillStyle = `rgba(232,195,90,${0.05 + glow * 0.05})`;
+        ctx.fill();
+        ctx.setLineDash([7, 5]);
+        ctx.strokeStyle = `rgba(232,195,90,${0.45 + glow * 0.35})`;
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
     if (view.targets && view.targets.size) {
       for (const id of view.targets) {
         const r = state.regions[id];
@@ -360,5 +432,5 @@ const Renderer = (function () {
     ctx.closePath();
   }
 
-  return { init, resize, draw, regionAt, screenToMap };
+  return { init, resize, draw, regionAt, screenToMap, zoomBy, panBy, resetView, getZoom };
 })();

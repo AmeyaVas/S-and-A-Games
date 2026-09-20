@@ -6,7 +6,7 @@
  * happening instead of teleporting the board.
  */
 
-const AI_PHASES = ['recruit', 'bombard', 'attack', 'stage', 'redeploy', 'done'];
+const AI_PHASES = ['expand', 'recruit', 'bombard', 'attack', 'stage', 'redeploy', 'done'];
 
 function createAI(state, fid) {
   return {
@@ -21,7 +21,8 @@ function createAI(state, fid) {
       if (this.guard++ > 260) { this.phase = AI_PHASES.length - 1; return null; }
       const phase = AI_PHASES[this.phase];
       let acted = null;
-      if (phase === 'recruit')       acted = aiRecruit(this.state, this.fid);
+      if (phase === 'expand')        acted = aiExpand(this.state, this.fid);
+      else if (phase === 'recruit')  acted = aiRecruit(this.state, this.fid);
       else if (phase === 'bombard')  acted = aiBombard(this.state, this.fid);
       else if (phase === 'attack')   acted = aiAttack(this.state, this.fid);
       else if (phase === 'stage')    acted = aiStage(this.state, this.fid);
@@ -100,11 +101,51 @@ function spareUnits(state, r, fid) {
   return movable.filter(u => !keep.has(u.id));
 }
 
+/* ---------- expansion ----------
+ *
+ * Buying a Free Hold is bloodless but leaves the ground empty, so it is worth
+ * it only for cheap land and only while there is gold to spare after the army
+ * is paid for. Runs before recruiting, which would otherwise spend the whole
+ * treasury down to its float every turn and leave nothing for land.
+ */
+
+/* Gold the commander will put into land this turn. Expansion and recruiting
+ * draw on the same discretionary pot above the float, and expansion gets first
+ * refusal on a share of it — a warlord speculates harder than a levy. */
+function expansionPurse(state, fid) {
+  const f = state.factions[fid];
+  const float = 4 + upkeepOf(state, fid);
+  const share = 0.5 + 0.35 * aggressionOf(state, fid);
+  return Math.min(f.gold, (f.gold - float) * share);
+}
+
+function aiExpand(state, fid) {
+  const purse = expansionPurse(state, fid);
+  if (purse <= 0) return null;
+
+  let best = null, bestEdge = 0;
+  for (const o of expandOptions(state, fid)) {
+    if (o.cost > purse) continue;
+    if (!canExpand(state, o.station, o.region, fid)) continue;
+    // Priced the same way a conquest is, minus what an empty region invites:
+    // whoever else borders it can walk straight in next turn.
+    const exposure = o.region.neighbors.filter(n => {
+      const owner = state.regions[n].owner;
+      return owner !== null && owner !== fid;
+    }).length;
+    const edge = regionValue(state, o.region, fid) / (1 + exposure * 0.6) - o.cost * 1.25;
+    if (edge > bestEdge) { bestEdge = edge; best = o; }
+  }
+  if (!best) return null;
+  if (!expand(state, best.station, best.region, fid)) return null;
+  return `expands into ${regionLabel(best.region)}`;
+}
+
 /* ---------- recruiting ---------- */
 
 function aiRecruit(state, fid) {
   const f = state.factions[fid];
-  const musters = state.regions.filter(r => isMusterPoint(state, r, fid));
+  const musters = state.regions.filter(r => isStation(state, r, fid));
   if (musters.length === 0) return null;
 
   // Keep a float for redeploys and next turn's upkeep.

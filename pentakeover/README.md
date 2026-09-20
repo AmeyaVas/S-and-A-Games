@@ -66,6 +66,42 @@ Highlighted regions are the legal targets.
 Space or Enter ends your turn, Escape clears a selection, C opens the codex,
 and H reopens the how-to-play page.
 
+## The map
+
+Drag the map to move it and use the wheel or the `+` / `−` buttons to zoom; `⤢`
+refits the whole continent. On a touch screen pinch to zoom and slide with **two
+fingers** — one finger is left to the page, which is the only way to scroll past
+a map that fills a phone.
+
+The grip on the map's trailing edge resizes the pane: drag it sideways to trade
+width with the sidebar, or up and down once the layout has stacked. It takes
+focus too, so the arrow keys resize it (hold Shift for bigger steps).
+
+Below 900px the layout stacks and the page becomes the one scroller — the
+sidebar runs on underneath the map rather than scrolling inside itself, and the
+map pane is sized to the continent so there is no dead band around it.
+
+## Expansion
+
+Your **stations** — your seat and every citadel you hold — can buy an adjacent
+Free Hold out of its independence instead of storming it. Select a station and
+the *Expand* panel lists the unclaimed ground on its border with a price on each
+one; the map dashes those regions in gold.
+
+There is no limit on how many you may take in a turn. The only limit is the
+treasury: the price of the first expansion is the ground's worth plus a payoff
+for each Free Hold soldier who has to be talked into going home, and **every
+further expansion in the same turn costs 60% more than the last**. Two is
+usually affordable, four is a whole empire's income, and the tariff resets when
+your next turn begins.
+
+What you buy is empty ground. The garrison disperses rather than joining you, so
+an annexed region is wide open until you walk somebody into it — which is the
+real price of taking land with coin instead of blood.
+
+Rival land is never for sale at any price, and neither are citadels. The five
+regions that decide the game have to be taken.
+
 ## How a battle resolves
 
 Each side pools its power — attack stats for the attacker, defence stats for the
@@ -88,8 +124,9 @@ do not.
 
 ## Money and supply
 
-Income arrives at the start of your turn, minus upkeep. Recruiting only happens
-at your capital and at citadels you hold, which is what gives movement a point.
+Income arrives at the start of your turn, minus upkeep. Recruiting and expansion
+only happen at your stations — your capital and the citadels you hold — which is
+what gives movement a point.
 
 Land also feeds troops: you can field `3 + 2 × regions` units on their listed
 wages, and every soldier past that costs another gold a turn. It is a price

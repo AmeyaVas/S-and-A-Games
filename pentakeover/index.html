@@ -34,6 +34,13 @@
     <div id="mapWrap">
       <canvas id="map"></canvas>
       <div id="banner" class="banner" hidden></div>
+      <div id="mapTools" class="map-tools">
+        <button id="btnZoomIn" class="maptool" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+        <button id="btnZoomOut" class="maptool" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+        <button id="btnZoomFit" class="maptool" type="button" title="Fit the whole map" aria-label="Fit the whole map">⤢</button>
+      </div>
+      <div id="mapHandle" class="map-handle" title="Drag to resize the map"
+           role="separator" aria-label="Resize the map" tabindex="0"><span></span></div>
     </div>
 
     <aside id="sidebar">
@@ -78,8 +85,14 @@
       </section>
 
       <section id="recruitPanel" class="panel" hidden>
-        <h3>Recruit <span class="muted">— muster point</span></h3>
+        <h3>Recruit <span class="muted">— station</span></h3>
         <div id="recruitList" class="recruit-list"></div>
+      </section>
+
+      <section id="expandPanel" class="panel" hidden>
+        <h3>Expand <span class="muted">— annex a Free Hold</span></h3>
+        <div id="expandList" class="recruit-list"></div>
+        <p id="expandHint" class="hint"></p>
       </section>
 
       <section class="panel log-panel">
