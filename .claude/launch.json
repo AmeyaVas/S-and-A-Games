@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "s-and-a-games",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8777"],
+      "port": 8777
+    },
+    {
+      "name": "s-and-a-games-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/serve.js", ".", "4173"],
+      "port": 4173
+    }
+  ]
+}
