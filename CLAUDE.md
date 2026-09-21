@@ -36,7 +36,13 @@ Prefer `s-and-a-games-node` when you are not on the usual Windows machine.
 ## Git
 
 - Changes land on a branch and go in through a pull request. Never commit
-  directly to `main`, even for a one-line change.
+  directly to `main` — with one exception.
+- **Small visual changes may go straight to `main`.** A CSS-only tweak to
+  colour, spacing, size, a label's wording, or similar polish, that cannot
+  change how anything behaves. Anything touching logic, data, config, build or
+  deployment takes the branch-and-PR route however small the diff looks. If you
+  are unsure which side of the line a change falls on, ask me rather than
+  deciding for yourself. With nobody there to answer, open the PR.
 - Castle Defense's history was grafted in with `git subtree`, so its pre-merge
   commits still refer to the paths they had in their own repo (`game.js`, not
   `tower-defense/game.js`). A path-filtered log does not reach them:
