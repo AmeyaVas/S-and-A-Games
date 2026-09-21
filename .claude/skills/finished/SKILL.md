@@ -21,6 +21,53 @@ a push, or a PR without invoking this skill, stop at the PR.
 The one thing that halts a run mid-flight is a secret-scan hit. Everything else you
 handle, work around, or report honestly at the end.
 
+## Reaching GitHub: `gh` or the MCP tools
+
+Every GitHub step below is written as a `gh` command, which is what a developer has
+on their own machine. **Claude Code on the web has no `gh`**, and installing it does
+not rescue the run: GitHub's GraphQL API is blocked in those sessions, most REST
+paths are filtered at the proxy, and `gh pr create`, `gh pr merge`, `gh pr list`,
+`gh pr view`, `gh repo view` and `gh auth status` all go through one or the other.
+They fail with `HTTP 403: GitHub GraphQL is not available from Claude Code sessions`
+or `Access to this GitHub API path is not permitted through this proxy`.
+
+Use the `mcp__github__*` tools there instead. They are built for that environment,
+need no install, and reach paths the proxy refuses to `gh`.
+
+Settle which route you are on once, in preflight, and use it for the whole run:
+
+```bash
+command -v gh >/dev/null && gh repo view --json nameWithOwner -q .nameWithOwner 2>&1 | tail -1
+```
+
+Probe with a GraphQL-backed command like this one, not with `gh api`. Plain REST
+calls such as `gh api repos/{owner}/{repo}` succeed in web sessions even though
+`gh pr create` does not, so probing with one reports a working `gh` that then fails
+at the step that matters.
+
+Printing the repo name means `gh` works — follow the commands as written. Anything
+else (no output, a 403, GraphQL in the message) means take the MCP column:
+
+| Step | `gh` | MCP tool |
+|---|---|---|
+| Repo and default branch | `gh repo view --json defaultBranchRef,nameWithOwner` | `mcp__github__search_repositories`, or read `git remote -v` for the name |
+| Auth check | `gh auth status` | skip — the tools carry their own credentials |
+| Collaborators | `gh api repos/{owner}/{repo}/collaborators` | `mcp__github__list_repository_collaborators` |
+| Find an existing PR | `gh pr list --head <branch>` | `mcp__github__list_pull_requests` with `head: "<owner>:<branch>"` |
+| Open the PR | `gh pr create` | `mcp__github__create_pull_request` |
+| Merge | `gh pr merge --squash\|--merge` | `mcp__github__merge_pull_request` with `merge_method` |
+| Verify the merge | `gh pr view <n> --json state,mergeCommit` | `mcp__github__pull_request_read` with `method: "get"` |
+
+Two differences that bite on the MCP route:
+
+- `expectedHeadSha` wants the **full 40-character** SHA, not the short one. `git rev-parse HEAD`.
+- There is no `--delete-branch`. Merge first, then delete the branch separately;
+  if that returns 403, say so in the report rather than claiming it was cleaned up.
+  Repos with "automatically delete head branches" enabled handle it for you.
+
+Everything outside this section — the git commands, the secret scan, the strategy
+call, the reporting — is identical on both routes.
+
 ## Preflight
 
 Gather state in one batch before touching anything:
@@ -37,6 +84,13 @@ scan below looking innocuous.
 git remote -v && gh auth status && gh repo view --json defaultBranchRef,nameWithOwner -q '.nameWithOwner + " base=" + .defaultBranchRef.name' && git config user.email && git config user.name
 ```
 
+On the MCP route the middle two fail. Take the repo name from `git remote -v` and
+the base branch from `git symbolic-ref refs/remotes/origin/HEAD`, and run the rest:
+
+```bash
+git remote -v && git symbolic-ref --short refs/remotes/origin/HEAD && git config user.email && git config user.name
+```
+
 Check `user.name` as well as `user.email` - either one missing stops `git commit`
 dead, and it fails *after* you have branched and staged. And read the
 `git branch --show-current` line deliberately: on a detached HEAD it prints nothing,
@@ -47,7 +101,8 @@ Stop and tell the user if any of these hold - none are yours to fix:
 - **Not a git repo.** Offer `git init` plus `gh repo create`, but run neither
   uninvited; creating a public repo is not undone by deleting it.
 - **No `origin`, or the remote is not GitHub.** Nothing to open a PR against.
-- **`gh` not authenticated.** Point at `gh auth login`.
+- **`gh` not authenticated.** Point at `gh auth login`. This one does not apply on
+  the MCP route: no `gh`, nothing to authenticate, carry on.
 - **Detached HEAD.** Committing here strands the work. Ask which branch they meant.
 - **No `user.email` / `user.name`.** Ask before setting it, and ask whether it goes
   in this repo or `--global` - that identity is stamped on every commit they make.
@@ -60,6 +115,9 @@ has to carry, so settle it here rather than at the merge.
 ```bash
 gh api "repos/{owner}/{repo}/collaborators" --jq '[.[].login] | "collaborators \(length): \(join(", "))"'
 ```
+
+MCP route: `mcp__github__list_repository_collaborators` with `affiliation: "all"`.
+The proxy refuses this path to `gh api` even where other REST calls succeed.
 
 ```bash
 git log --format='%ae' | sort -u
@@ -237,12 +295,20 @@ Be truthful in the test plan. Look for a test runner first (a `test` script, a
 which tests passed, or write that you ran nothing. This PR is about to merge itself
 into the default branch, and the test plan is the only signal the user gets first.
 
+MCP route: `mcp__github__create_pull_request` with `owner`, `repo`, `base`, `head`
+(the bare branch name), `title` and `body`. It returns the new PR's url, which
+carries its number.
+
 If a PR already exists, `gh pr create` says so - reuse it. Either way, capture the PR
 number before merging rather than parsing it out of the URL by eye:
 
 ```bash
 gh pr list --head <branch> --state open --json number,url -q '.[0] | "#\(.number) \(.url)"'
 ```
+
+MCP route: `mcp__github__list_pull_requests` with `state: "open"` and
+`head: "<owner>:<branch>"` - the owner prefix is required, and an empty array is the
+answer that no PR exists yet.
 
 Once the merge deletes the branch, `gh` can no longer infer it.
 
@@ -268,6 +334,13 @@ output does not mean a `--merge` degraded into one.
 ```bash
 gh pr view <number> --json number,state,url,mergeCommit -q '"#\(.number) \(.state) \(.url) \(.mergeCommit.oid[0:7])"'
 ```
+
+MCP route: merge with `mcp__github__merge_pull_request` (`merge_method: "merge"` or
+`"squash"`, and `expectedHeadSha` as the full 40-character `git rev-parse HEAD` - a
+short SHA is rejected outright). It has no `--delete-branch`, so the branch is a
+separate step afterwards. Then verify with `mcp__github__pull_request_read`,
+`method: "get"`: `merged` must read `true` and `state` must read `closed` before you
+say it merged. The merge response's own `sha` is the resulting commit.
 
 The number is not optional: `--delete-branch` has already moved you to the base
 branch, so a bare `gh pr view` fails on `main` - or silently resolves some unrelated
@@ -302,6 +375,13 @@ Expect no-ops. `--delete-branch` usually already switched you to the base,
 fast-forwarded it, and deleted both copies of the feature branch - "Already on
 'main'" is the success case. Run it anyway: idempotent, covers the cases where `gh`
 leaves you behind, and the prune clears stale refs.
+
+On the MCP route nothing has deleted the branch yet, so these are real work rather
+than no-ops. Try `git push origin --delete <branch>` after the merge. It can come
+back `HTTP 403` where the session's credentials do not carry ref-deletion rights;
+that is not something to route around. Say in the report that the branch is still
+there and how to remove it, or note that the repo's "automatically delete head
+branches" setting already did. Either way the merge itself is unaffected.
 
 ```bash
 git branch --show-current && git rev-parse --short HEAD && git status --porcelain=v1 && git ls-remote --heads origin <branch>
