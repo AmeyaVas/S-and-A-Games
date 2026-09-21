@@ -42,6 +42,18 @@ body {
   font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   overflow: hidden;
+  /* A click on the war table is a move, not a text drag. Without this the
+     browser reads the same gesture as "select text" and paints a blue wash
+     across every label you sweep past. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The seed box is real text the player types and edits, so selection stays on
+   there — it is the one place the blue highlight is wanted. */
+input {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* ---------- the plate ----------

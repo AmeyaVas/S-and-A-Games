@@ -13,6 +13,10 @@ body {
   color: #e8d9b5;
   /* keeps a strip clear along the top so the back link never sits over the board */
   padding-top: 44px;
+  /* a click on the board is a game move, not a text drag — without this the
+     browser paints a blue selection over the labels as you play */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Back to the landing page. Same corner and size as Gravity Golf's. */
