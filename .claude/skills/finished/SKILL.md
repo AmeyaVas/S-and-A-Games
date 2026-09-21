@@ -120,18 +120,30 @@ MCP route: `mcp__github__list_repository_collaborators` with `affiliation: "all"
 The proxy refuses this path to `gh api` even where other REST calls succeed.
 
 ```bash
-git log --format='%ae' | sort -u
+git log --format='%ae' | grep -viE '@anthropic\.com|\[bot\]' | sort -u
 ```
 
-**Solo - the user is the only collaborator and the only author in the log: squash.**
-They wrote every commit on the branch and already know how the work went; preserving
-six WIP commits and a merge bubble on main tells them nothing they do not remember,
-and costs them a `git log` they can skim.
+The filter is the point: this skill only ever runs as Claude, so Claude is an author
+in every repo it has touched. Counting itself, it would read its own presence as a
+second person and force `merge` on a repo the user works alone in - a signal that is
+always true tells you nothing. The same goes for other bots. Count humans.
 
-**Anyone else has push access, or anyone else appears in the log: merge.** Individual
-commits are how a collaborator reconstructs a change they were not present for.
-Squashing throws that away on someone else's behalf, which is not the user's call to
-make by default.
+The collaborator API needs no equivalent filter: commits are attributed to the
+account whose credentials pushed them, so Claude does not appear in that list.
+
+**Solo - the user is the only collaborator and the only *human* author in the log:
+squash.** They wrote every commit on the branch and already know how the work went;
+preserving six WIP commits and a merge bubble on main tells them nothing they do not
+remember, and costs them a `git log` they can skim.
+
+**Another human has push access, or another human appears in the log: merge.**
+Individual commits are how a collaborator reconstructs a change they were not present
+for. Squashing throws that away on someone else's behalf, which is not the user's
+call to make by default. This holds for a collaborator who is not around right now -
+an inactive contributor is still someone who will read this history later.
+
+If the filter leaves no authors at all - a repo where every commit so far is Claude's
+- treat the log as saying solo and let the collaborator API decide.
 
 Both signals have to say solo. They answer different questions - the API says who
 *can* push, the log says who actually has - and a public repo takes PRs from people
