@@ -2,13 +2,15 @@
 .claude/
 
 # The repo root's is the exception: launch.json and serve.js are shared config
-# that a fresh checkout (or a cloud session) needs to preview the games.
+# that a fresh checkout (or a cloud session) needs to preview the games, and
+# skills/ holds shared workflows every clone should get.
 # Re-include the directory, re-exclude its contents, then name the keepers —
 # git cannot re-include a file whose parent directory is excluded.
 !/.claude/
 /.claude/*
 !/.claude/launch.json
 !/.claude/serve.js
+!/.claude/skills/
 
 # Vercel CLI's local project link (holds the project and org ids).
 .vercel/
