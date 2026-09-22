@@ -9,6 +9,16 @@ The user is done with a chunk of work and wants it on the default branch. Run th
 whole chain without pausing for approval between steps - that is the point of the
 skill. Handing back a PR link plus "shall I merge?" is a failure to do the job.
 
+## Read the current version first
+
+What you were handed at invocation is a snapshot from when the session started. If
+this file has changed since - an edit, a `git pull` - that snapshot is stale and you
+are about to follow superseded instructions.
+
+So before anything else, read `SKILL.md` from the base directory the invocation
+names, and follow that. Where the two differ the file on disk wins, and say which
+one you used. Once, at the start; not between steps.
+
 ## Merge authorization
 
 CLAUDE.md says merging is a separate request: open the PR, hand over the link, merge
