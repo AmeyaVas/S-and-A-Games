@@ -391,6 +391,30 @@ Four failure modes to handle rather than just report:
 If branch protection requires a human review, leave the PR open, hand over the link,
 and say plainly that the repo wants a review first.
 
+### If the merge turns out wrong
+
+Once it is on the default branch, reverting is the move. Not `reset --hard` and not
+a force-push: the commit is published, and rewriting it breaks every checkout and
+every branch built on it.
+
+A merge commit needs the mainline flag or git refuses it outright - `error: commit
+<sha> is a merge but no -m option was given`:
+
+```bash
+git revert -m 1 <merge sha>
+```
+
+`-m 1` means "keep parent 1", the base branch's side, so the merged branch's changes
+come out and whatever else landed on the base stays. A squash produced one ordinary
+commit instead, so there plain `git revert <sha>` is right.
+
+The revert is itself a change and goes through the repo's normal route - a branch and
+a PR - rather than straight to the default branch. Where the default branch deploys
+on push, say so when reporting: the bad state is live until the revert lands, and
+rolling the deployment back from the host's dashboard is usually faster than the git
+round trip. Offer that first, then land the revert so the repository agrees with
+what is being served.
+
 ## 6. Clean up
 
 ```bash
