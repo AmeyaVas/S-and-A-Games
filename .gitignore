@@ -11,6 +11,8 @@
 !/.claude/launch.json
 !/.claude/serve.js
 !/.claude/skills/
+!/.claude/settings.json
+!/.claude/hooks/
 
 # Vercel CLI's local project link (holds the project and org ids).
 .vercel/
