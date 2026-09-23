@@ -40,7 +40,7 @@ on it. See [its README](gravity-golf/README.md) for the details.
 The site is static, so hosting it is just a matter of serving the repo root —
 `index.html` is the landing page and each game lives at `/<game>/`.
 
-It is deployed on Vercel at **<https://s-and-a-games.vercel.app>**, built from
+It is deployed on Vercel at **<https://s-and-a-gam.vercel.app>**, built from
 `main`. Every push to `main` publishes; every pull request gets its own preview
 URL.
 
