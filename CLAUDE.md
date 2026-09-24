@@ -35,9 +35,10 @@ Prefer `s-and-a-games-node` when you are not on the usual Windows machine.
 
 ## Git
 
-- Changes land on a branch and go in through a pull request. Never commit
-  directly to `main` — with one exception.
-- **Small visual changes may go straight to `main`.** A CSS-only tweak to
+- Always merge through a pull request, unless it is a change that has to do with
+  aligning some files to be up to date, or it is a small visual or UI change, in
+  which case merge straight to `main`.
+- **What counts as a small visual change:** a CSS-only tweak to
   colour, spacing, size, a label's wording, or similar polish, that cannot
   change how anything behaves. Anything touching logic, data, config, build or
   deployment takes the branch-and-PR route however small the diff looks. If you
