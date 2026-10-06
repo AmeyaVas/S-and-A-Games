@@ -1,6 +1,6 @@
 # S & A Games
 
-Three browser games in one repo. None has a build step, a package manager, or a
+Four browser games in one repo. None has a build step, a package manager, or a
 single dependency — every game is plain HTML, CSS and JavaScript, and runs by
 opening a file.
 
@@ -9,10 +9,11 @@ opening a file.
 | [**Gravity Golf**](gravity-golf/) | Slingshot mini-golf played through real gravity. Planets pull, suns burn, repulsors push. 9 hand-made holes in three sections. |
 | [**Castle Defense**](tower-defense/) | Pixel-art tower defense. Four upgradable turret types, a boss every tenth wave, 100 waves to survive. |
 | [**Pentakeover**](pentakeover/) | Turn-based territory conquest. Five unit types, five factions, five citadels on a procedural map. Computer opponents or hotseat. |
+| [**Tank Duel**](tank-duel/) | Two-player artillery for one keyboard. Set an angle and a power, fire over the hill, and crater the ground you are both standing on. |
 
 Each game has its own README with full instructions:
 [Gravity Golf](gravity-golf/README.md) · [Castle Defense](tower-defense/README.md) ·
-[Pentakeover](pentakeover/README.md).
+[Pentakeover](pentakeover/README.md) · [Tank Duel](tank-duel/README.md).
 
 ## Playing
 
