@@ -22,7 +22,9 @@
      blows a long shot about 50px off line — a correction you learn to make —
      whereas 0.012 accelerated the shell sideways harder than gravity pulled it
      down, which made aiming guesswork. */
-  const WIND_ACC  = 0.0015; // sideways px per step squared, per unit of wind
+  const WIND_ACC  = 0.0014; // sideways px per step squared, per unit of wind
+  const WIND_MAX  = 12;     // strongest wind either way
+  const WIND_STEP = 4;      // most it may change from one turn to the next
   const SPEED      = 0.18;  // muzzle px per step, per unit of power
   const SUBSTEPS   = 4;     // collision accuracy within one animation frame
   const BLAST_R    = 30;    // crater radius
@@ -108,13 +110,20 @@
     phase = 'aim';
     shake = 0;
     puffs = [];
-    newWind();
+    wind = Math.round((Math.random() * 2 - 1) * WIND_MAX);
     document.getElementById('overlay').hidden = true;
     syncHud();
   }
 
+  /* Wind drifts rather than being re-rolled. An independent draw each turn
+     meant it could go from 10 left to 15 right between two shots, which threw
+     away everything the last shot taught you — and with a shell that leaves
+     the field quickly, that could happen inside a second. Nudging it by a few
+     points keeps a reading useful for a turn or two while still turning right
+     round over the course of a match. */
   function newWind() {
-    wind = Math.round((Math.random() * 2 - 1) * 20);
+    const drift = (Math.random() * 2 - 1) * WIND_STEP;
+    wind = Math.round(Math.max(-WIND_MAX, Math.min(WIND_MAX, wind + drift)));
   }
 
   // ---- firing ----------------------------------------------------------
