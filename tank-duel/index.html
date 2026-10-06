@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tank Duel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="back" href="../index.html">&larr; All games</a>
+
+  <main id="app">
+    <header id="bar">
+      <div class="side" id="side1">
+        <span class="who">Player 1</span>
+        <div class="hp"><i id="hp1"></i></div>
+      </div>
+
+      <div id="centre">
+        <h1>Tank&nbsp;Duel</h1>
+        <p id="wind"><span class="lbl">Wind</span> <b id="windVal">&mdash;</b></p>
+      </div>
+
+      <div class="side right" id="side2">
+        <span class="who">Player 2</span>
+        <div class="hp"><i id="hp2"></i></div>
+      </div>
+    </header>
+
+    <div id="field">
+      <canvas id="canvas" width="900" height="500"></canvas>
+
+      <div id="overlay" hidden>
+        <p id="overlayTitle"></p>
+        <p id="overlaySub"></p>
+        <button id="again">New match</button>
+      </div>
+    </div>
+
+    <footer id="dash">
+      <p id="turn"><b id="turnWho">Player 1</b> to fire</p>
+
+      <div class="readouts">
+        <span class="read"><span class="lbl">Angle</span> <b id="angleVal">45&deg;</b></span>
+        <span class="read"><span class="lbl">Power</span> <b id="powerVal">55</b></span>
+      </div>
+
+      <p id="keys">
+        <kbd>&uarr;</kbd><kbd>&darr;</kbd> aim &nbsp;
+        <kbd>&larr;</kbd><kbd>&rarr;</kbd> power &nbsp;
+        <kbd>Space</kbd> fire &nbsp;
+        <kbd>R</kbd> restart
+      </p>
+    </footer>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>

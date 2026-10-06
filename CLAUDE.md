@@ -1,6 +1,7 @@
 # S & A Games
 
-Three self-contained browser games: Gravity Golf, Castle Defense, Pentakeover.
+Four self-contained browser games: Gravity Golf, Castle Defense, Pentakeover,
+Tank Duel.
 [README.md](README.md) covers what they are and how to play them. This file
 covers how to work on them.
 
