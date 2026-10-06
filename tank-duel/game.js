@@ -26,8 +26,8 @@
 
   /* Wind is the one thing players argue about, so it is adjustable rather than
      baked in. windMax is the most it can ever blow; windStep is how far it may
-     move between shots, and at 0 it is drawn once and holds all match. These
-     survive a restart — you set them for the group, not for the round. */
+     move between shots, never below 1 so the wind is never simply static.
+     These survive a restart — you set them for the group, not for the round. */
   const cfg = { windOn: true, windMax: 12, windStep: 4 };
   const SPEED      = 0.18;  // muzzle px per step, per unit of power
   const SUBSTEPS   = 4;     // collision accuracy within one animation frame
@@ -311,7 +311,9 @@
     cfg.windMax = Number(maxRange.value); syncPanel(); applyCfg();
   });
   stepRange.addEventListener('input', () => {
-    cfg.windStep = Number(stepRange.value); syncPanel(); applyCfg();
+    // Floor it here as well as on the input, so the rule holds whatever
+    // route the value arrives by.
+    cfg.windStep = Math.max(1, Number(stepRange.value)); syncPanel(); applyCfg();
   });
 
   syncPanel();

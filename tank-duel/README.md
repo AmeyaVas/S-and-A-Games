@@ -56,7 +56,7 @@ visits — reloading the page returns to the defaults below.
 |---|---|---|
 | Wind on | on | Switch the wind off entirely. The readout says `off` and shells fly on gravity alone. |
 | Strength | 12 | The most the wind can ever blow, either way. At 25 a long shot needs a large correction; at 3 it is barely a nudge. |
-| Shift per turn | 4 | How far the wind may move between shots. At **0** it is drawn once at the start of a match and holds for the whole thing. |
+| Shift per turn | 4 | How far the wind may move between shots, from **1** to 12. Low keeps it readable between turns; high makes every shot a fresh problem. It cannot be set to 0 — the wind always moves a little. |
 
 Turning wind off leaves the two sliders greyed but keeps their values, so
 switching it back on restores what you had.
