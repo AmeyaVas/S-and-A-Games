@@ -44,6 +44,11 @@ Prefer `s-and-a-games-node` when you are not on the usual Windows machine.
   deployment takes the branch-and-PR route however small the diff looks. If you
   are unsure which side of the line a change falls on, ask me rather than
   deciding for yourself. With nobody there to answer, open the PR.
+- After pushing to a pull request, fetch the new Vercel preview URL for that
+  commit and give it in the reply. The project is `s-and-a-gam` in the `aaas5`
+  team; match the deployment by commit SHA rather than taking the newest one —
+  a preview from an earlier push looks identical and quietly serves the old
+  build.
 - Castle Defense's history was grafted in with `git subtree`, so its pre-merge
   commits still refer to the paths they had in their own repo (`game.js`, not
   `tower-defense/game.js`). A path-filtered log does not reach them:
