@@ -49,7 +49,9 @@ Prefer `s-and-a-games-node` when you are not on the usual Windows machine.
   commit and give it in the reply. The project is `s-and-a-gam` in the `aaas5`
   team; match the deployment by commit SHA rather than taking the newest one —
   a preview from an earlier push looks identical and quietly serves the old
-  build.
+  build. The preview is the only URL worth quoting: do not hand over the
+  production address after a merge as well, since it never changes and is
+  already known.
 - Castle Defense's history was grafted in with `git subtree`, so its pre-merge
   commits still refer to the paths they had in their own repo (`game.js`, not
   `tower-defense/game.js`). A path-filtered log does not reach them:
