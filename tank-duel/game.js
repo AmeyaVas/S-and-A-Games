@@ -244,10 +244,19 @@
   function readAim() {
     if (phase !== 'aim') return;
     const t = tanks[turn];
-    if (held.has('ArrowLeft'))  t.angle = Math.min(ANGLE_MAX, t.angle + 0.9);
-    if (held.has('ArrowRight')) t.angle = Math.max(ANGLE_MIN, t.angle - 0.9);
-    if (held.has('ArrowUp'))    t.power = Math.min(POWER_MAX, t.power + 0.8);
-    if (held.has('ArrowDown'))  t.power = Math.max(POWER_MIN, t.power - 0.8);
+
+    /* Up raises the barrel and down drops it, for whichever tank is firing.
+       That needs a sign: angles run counter-clockwise from the right, so the
+       left tank raises by counting up towards 90 and the right tank, aiming
+       back the other way from 135, raises by counting down towards it. Without
+       the flip, up would lower player 2's barrel. */
+    const raise = turn === 0 ? 1 : -1;
+    if (held.has('ArrowUp'))    t.angle += 0.9 * raise;
+    if (held.has('ArrowDown'))  t.angle -= 0.9 * raise;
+    t.angle = Math.max(ANGLE_MIN, Math.min(ANGLE_MAX, t.angle));
+
+    if (held.has('ArrowRight')) t.power = Math.min(POWER_MAX, t.power + 0.8);
+    if (held.has('ArrowLeft'))  t.power = Math.max(POWER_MIN, t.power - 0.8);
   }
 
   // ---- HUD -------------------------------------------------------------

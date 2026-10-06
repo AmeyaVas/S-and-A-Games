@@ -27,12 +27,16 @@ is about to fire.
 
 | Key | Does |
 |---|---|
-| <kbd>&larr;</kbd> <kbd>&rarr;</kbd> | Raise and lower the barrel |
-| <kbd>&uarr;</kbd> <kbd>&darr;</kbd> | More and less power |
+| <kbd>&uarr;</kbd> <kbd>&darr;</kbd> | Raise and lower the barrel |
+| <kbd>&rarr;</kbd> <kbd>&larr;</kbd> | More and less power |
 | <kbd>Space</kbd> | Fire |
 | <kbd>R</kbd> | Start a new match |
 
 Hold an arrow key rather than tapping it — the numbers sweep while it is held.
+
+Up always *raises* the firing tank's barrel, whichever side it is on. The two
+tanks aim in opposite directions, so the key has to mean "raise" rather than a
+fixed direction of rotation, or it would be inverted for player 2.
 
 1. **Read the wind** at the top of the screen. It changes every turn and is the only thing the two numbers don't tell you.
 2. **Set an angle and a power**, then fire. The shell arcs under gravity, drifts with the wind, and explodes on whatever it meets first.
