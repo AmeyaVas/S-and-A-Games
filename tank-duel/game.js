@@ -125,10 +125,20 @@
      the field quickly, that could happen inside a second. Nudging it by a few
      points keeps a reading useful for a turn or two while still turning right
      round over the course of a match. */
+  /* The drift bounces off the limits rather than stopping dead at them.
+     Clamping made a random walk pile up against the cap and sit there for
+     turns on end — technically still moving, but reading the same every shot.
+     Reflecting sends it back the way it came, so the wind keeps circulating
+     through the whole range. The loop is bounded and backed by a clamp because
+     a single reflection is not enough when the step is wide relative to the
+     cap, which it is once strength is turned right down. */
   function newWind() {
     if (!cfg.windOn) { wind = 0; return; }
-    const drift = (Math.random() * 2 - 1) * cfg.windStep;
-    wind = Math.round(Math.max(-cfg.windMax, Math.min(cfg.windMax, wind + drift)));
+    let next = wind + (Math.random() * 2 - 1) * cfg.windStep;
+    for (let i = 0; i < 4 && Math.abs(next) > cfg.windMax; i++) {
+      next = (next > 0 ? 2 : -2) * cfg.windMax - next;
+    }
+    wind = Math.round(Math.max(-cfg.windMax, Math.min(cfg.windMax, next)));
   }
 
   /* Called when a setting changes mid-match: bring the wind now in play inside
