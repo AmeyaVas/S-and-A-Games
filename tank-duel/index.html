@@ -18,7 +18,10 @@
 
       <div id="centre">
         <h1>Tank&nbsp;Duel</h1>
-        <p id="wind"><span class="lbl">Wind</span> <b id="windVal">&mdash;</b></p>
+        <p id="wind">
+          <span class="lbl">Wind</span> <b id="windVal">&mdash;</b>
+          <button id="openSettings" type="button" aria-haspopup="dialog">Settings</button>
+        </p>
       </div>
 
       <div class="side right" id="side2">
@@ -29,6 +32,35 @@
 
     <div id="field">
       <canvas id="canvas" width="900" height="500"></canvas>
+
+      <div id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+        <h2 id="setTitle">Wind</h2>
+
+        <label class="row">
+          <span>Wind on</span>
+          <input type="checkbox" id="setWindOn" checked>
+        </label>
+
+        <label class="row">
+          <span>Strength</span>
+          <input type="range" id="setWindMax" min="0" max="25" step="1" value="12">
+          <b id="outWindMax">12</b>
+        </label>
+
+        <label class="row">
+          <span>Shift per turn</span>
+          <input type="range" id="setWindStep" min="0" max="12" step="1" value="4">
+          <b id="outWindStep">4</b>
+        </label>
+
+        <p class="note">
+          <b>Strength</b> is the most the wind can ever blow.
+          <b>Shift per turn</b> is how far it may move between shots &mdash;
+          at 0 it is picked once and holds for the whole match.
+        </p>
+
+        <button id="closeSettings" type="button">Done</button>
+      </div>
 
       <div id="overlay" hidden>
         <p id="overlayTitle"></p>

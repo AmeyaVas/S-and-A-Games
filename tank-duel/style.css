@@ -147,6 +147,102 @@ canvas {
   touch-action: none;
 }
 
+/* ---------- settings ---------- */
+
+/* The way in sits beside the wind reading, because that is all it changes. */
+#openSettings {
+  margin: 0 0 0 10px;
+  padding: 3px 8px;
+  font-size: 9px;
+  letter-spacing: .16em;
+  color: var(--muted);
+  background: var(--plate);
+  border: 1px solid var(--edge);
+  vertical-align: 1px;
+}
+
+#openSettings:hover, #openSettings:focus-visible {
+  color: var(--amber);
+  background: var(--plate);
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+
+#settings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 14px;
+  padding: clamp(20px, 6vw, 56px);
+  background: #0b0d07f2;
+  border-radius: 3px;
+}
+
+#settings[hidden] { display: none; }
+
+#settings h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Label, control, read-out — the number column is fixed so the sliders line
+   up with each other however many digits the value has. */
+.row {
+  display: grid;
+  grid-template-columns: 9em 1fr 2.5em;
+  align-items: center;
+  gap: 14px;
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.row > span { font-size: 13px; color: var(--ink); }
+
+.row b {
+  font-family: var(--num);
+  font-size: 16px;
+  color: var(--amber);
+  text-align: right;
+}
+
+.row input[type="range"] {
+  width: 100%;
+  accent-color: var(--amber);
+  background: transparent;
+}
+
+.row input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--amber);
+  justify-self: start;
+}
+
+/* A disabled row should read as switched off, not broken. */
+.row.off > span, .row.off b { opacity: .4; }
+.row.off input { opacity: .4; cursor: not-allowed; }
+
+#settings .note {
+  max-width: 460px;
+  margin: 0 auto;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+}
+
+#settings .note b { color: var(--ink); font-weight: 600; }
+
+#settings button#closeSettings { align-self: center; }
+
 #overlay {
   position: absolute;
   inset: 0;
