@@ -23,8 +23,12 @@
      whereas 0.012 accelerated the shell sideways harder than gravity pulled it
      down, which made aiming guesswork. */
   const WIND_ACC  = 0.0014; // sideways px per step squared, per unit of wind
-  const WIND_MAX  = 12;     // strongest wind either way
-  const WIND_STEP = 4;      // most it may change from one turn to the next
+
+  /* Wind is the one thing players argue about, so it is adjustable rather than
+     baked in. windMax is the most it can ever blow; windStep is how far it may
+     move between shots, never below 1 so the wind is never simply static.
+     These survive a restart — you set them for the group, not for the round. */
+  const cfg = { windOn: true, windMax: 12, windStep: 4 };
   const SPEED      = 0.18;  // muzzle px per step, per unit of power
   const SUBSTEPS   = 4;     // collision accuracy within one animation frame
   const BLAST_R    = 30;    // crater radius
@@ -110,7 +114,7 @@
     phase = 'aim';
     shake = 0;
     puffs = [];
-    wind = Math.round((Math.random() * 2 - 1) * WIND_MAX);
+    wind = cfg.windOn ? Math.round((Math.random() * 2 - 1) * cfg.windMax) : 0;
     document.getElementById('overlay').hidden = true;
     syncHud();
   }
@@ -121,9 +125,28 @@
      the field quickly, that could happen inside a second. Nudging it by a few
      points keeps a reading useful for a turn or two while still turning right
      round over the course of a match. */
+  /* The drift bounces off the limits rather than stopping dead at them.
+     Clamping made a random walk pile up against the cap and sit there for
+     turns on end — technically still moving, but reading the same every shot.
+     Reflecting sends it back the way it came, so the wind keeps circulating
+     through the whole range. The loop is bounded and backed by a clamp because
+     a single reflection is not enough when the step is wide relative to the
+     cap, which it is once strength is turned right down. */
   function newWind() {
-    const drift = (Math.random() * 2 - 1) * WIND_STEP;
-    wind = Math.round(Math.max(-WIND_MAX, Math.min(WIND_MAX, wind + drift)));
+    if (!cfg.windOn) { wind = 0; return; }
+    let next = wind + (Math.random() * 2 - 1) * cfg.windStep;
+    for (let i = 0; i < 4 && Math.abs(next) > cfg.windMax; i++) {
+      next = (next > 0 ? 2 : -2) * cfg.windMax - next;
+    }
+    wind = Math.round(Math.max(-cfg.windMax, Math.min(cfg.windMax, next)));
+  }
+
+  /* Called when a setting changes mid-match: bring the wind now in play inside
+     whatever the new limits are, rather than waiting a turn to take effect. */
+  function applyCfg() {
+    if (!cfg.windOn) wind = 0;
+    else wind = Math.round(Math.max(-cfg.windMax, Math.min(cfg.windMax, wind)));
+    syncHud();
   }
 
   // ---- firing ----------------------------------------------------------
@@ -237,6 +260,12 @@
   const AIM_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ']);
 
   addEventListener('keydown', e => {
+    /* While the panel is open the sliders own the arrow keys and Space, so
+       stealing either here would leave the controls unusable. */
+    if (settingsOpen()) {
+      if (e.key === 'Escape') closeSettings();
+      return;
+    }
     if (e.key === 'r' || e.key === 'R') { reset(); return; }
     if (AIM_KEYS.has(e.key)) e.preventDefault();
     if (e.key === ' ') { fire(); return; }
@@ -248,10 +277,61 @@
 
   document.getElementById('again').addEventListener('click', reset);
 
+  // ---- settings --------------------------------------------------------
+
+  const panel = document.getElementById('settings');
+  const onBox = document.getElementById('setWindOn');
+  const maxRange = document.getElementById('setWindMax');
+  const stepRange = document.getElementById('setWindStep');
+
+  const settingsOpen = () => !panel.hidden;
+
+  function openSettings() {
+    held.clear();   // a key still down as the panel opens would otherwise stick
+    panel.hidden = false;
+    /* Focus Done, not the checkbox. Space is fire everywhere else in this
+       game, and Space on a focused checkbox silently flips it — so a player
+       reaching for the key they have been pressing all match would turn the
+       wind off without meaning to. On Done it just closes the panel. */
+    document.getElementById('closeSettings').focus();
+  }
+
+  function closeSettings() {
+    panel.hidden = true;
+    document.getElementById('openSettings').focus();
+  }
+
+  /* Grey the sliders out when wind is off. They keep their values — turning
+     wind back on should restore what you had, not a default. */
+  function syncPanel() {
+    document.getElementById('outWindMax').textContent = cfg.windMax;
+    document.getElementById('outWindStep').textContent = cfg.windStep;
+    maxRange.disabled = stepRange.disabled = !cfg.windOn;
+    maxRange.closest('.row').classList.toggle('off', !cfg.windOn);
+    stepRange.closest('.row').classList.toggle('off', !cfg.windOn);
+  }
+
+  document.getElementById('openSettings').addEventListener('click', openSettings);
+  document.getElementById('closeSettings').addEventListener('click', closeSettings);
+
+  onBox.addEventListener('change', () => {
+    cfg.windOn = onBox.checked; syncPanel(); applyCfg();
+  });
+  maxRange.addEventListener('input', () => {
+    cfg.windMax = Number(maxRange.value); syncPanel(); applyCfg();
+  });
+  stepRange.addEventListener('input', () => {
+    // Floor it here as well as on the input, so the rule holds whatever
+    // route the value arrives by.
+    cfg.windStep = Math.max(1, Number(stepRange.value)); syncPanel(); applyCfg();
+  });
+
+  syncPanel();
+
   /* Held keys nudge the numbers every frame, so a long press sweeps smoothly
      instead of stepping once per key repeat. */
   function readAim() {
-    if (phase !== 'aim') return;
+    if (phase !== 'aim' || settingsOpen()) return;
     const t = tanks[turn];
 
     /* Up raises the barrel and down drops it, for whichever tank is firing.
@@ -280,7 +360,8 @@
     document.getElementById('turnWho').style.color = t.colour;
 
     const arrow = wind === 0 ? '—' : (wind > 0 ? '→' : '←');
-    document.getElementById('windVal').textContent = arrow + ' ' + Math.abs(wind);
+    document.getElementById('windVal').textContent =
+      cfg.windOn ? arrow + ' ' + Math.abs(wind) : 'off';
   }
 
   // ---- drawing ---------------------------------------------------------

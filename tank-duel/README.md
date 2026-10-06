@@ -45,6 +45,26 @@ fixed direction of rotation, or it would be inverted for player 2.
 
 Shells that fly off the left or right edge are simply gone, and the turn passes. Going off the **top** is fine — lobbing a shell high over the ridge is a legitimate way to reach someone dug in on the far side.
 
+## Settings
+
+**Settings**, beside the wind reading at the top, opens a panel with three
+controls. Changes take effect straight away and survive <kbd>R</kbd>, so you set
+them once for the group rather than once per round. They are not saved between
+visits — reloading the page returns to the defaults below.
+
+| Setting | Default | What it does |
+|---|---|---|
+| Wind on | on | Switch the wind off entirely. The readout says `off` and shells fly on gravity alone. |
+| Strength | 12 | The most the wind can ever blow, either way. At 25 a long shot needs a large correction; at 3 it is barely a nudge. |
+| Shift per turn | 4 | How far the wind may move between shots, from **1** to 12. Low keeps it readable between turns; high makes every shot a fresh problem. It cannot be set to 0 — the wind always moves a little. |
+
+Turning wind off leaves the two sliders greyed but keeps their values, so
+switching it back on restores what you had.
+
+Pressing <kbd>Space</kbd> with the panel open closes it rather than firing —
+the Done button takes focus deliberately, because Space is fire everywhere else
+and on a focused checkbox it would silently flip the wind off instead.
+
 ## Notes on the physics
 
 Gravity, wind and muzzle speed are the three constants at the top of `game.js`, and they interact more than you would expect. Wind in particular is tuned to about an eighth of gravity at full strength: enough that a long shot needs a correction of roughly fifty pixels, but not enough to make aiming guesswork. An earlier build had it accelerating the shell sideways *harder* than gravity pulled it down, and the game was unplayable — a point-blank shot drifted forty pixels off target.
