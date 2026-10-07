@@ -1,0 +1,115 @@
+Add a platformer: Delve (n-gon-inspired cave roguelite)
+Context
+The site has four self-contained canvas games. The user wants a fifth: a platformer modelled loosely on n-gon. It should share n-gon's themes without copying them: large levels, healing, lots of enemies that visibly die, mouse-aimed shooting, and powerups. The powerups must not be n-gon's (heal / ammo / research / tech / field / gun). On top of that, the game should be:
+
+a little roguelike: runs, upgrades that last for the run, and rerolled layouts;
+cave-dweller themed;
+built around a guided, large and tall tunnel mechanic: big winding cave systems that lead you along one route.
+The levels are hand-made, but some marked spots reroll every run. For example, a few designated blocks may rarely become lava, and a jump pad might become a staircase. The randomness must never make a level impossible.
+
+The CLAUDE.md constraints apply:
+
+plain HTML/CSS/JS, with no build step and no dependencies (no matter.js, unlike n-gon);
+no code shared with the other games;
+LF line endings;
+logic changes go in through a PR.
+The game
+Delve is a descent through 5 cave depths in one run.
+
+The run (light roguelike)
+A run is Depths 1 → 5, ending with the Warden at the bottom.
+You have one life: dying (HP 0, or falling into a bottomless pit) ends the run, and the next run starts again at Depth 1 with fresh rolls and no relics.
+Spikes and lava deal heavy damage rather than killing instantly, so a single misstep is costly but survivable. Only bottomless pits kill outright.
+Between depths you pick 1 of 3 relics. These are permanent for the run, for example:
++max HP
++shot damage
+bigger light radius
+sparks heal more
+longer timed-powerup duration
+a chance for kills to drop crystals
+Every run rerolls the variant spots (see below), so no two runs play quite the same.
+Saved in localStorage (try/catch): deepest depth reached, best full-run time, and total kills.
+Guided tunnels (the core level shape)
+Each depth is a large hand-made cave of roughly 200–300 × 60–90 tiles. It is one main tunnel that winds horizontally and drops down tall vertical shafts, with the camera scrolling both ways.
+The way is guided rather than signposted. Glow-moss trails along the main route light up as you approach, so you always know which way leads deeper. Side pockets off the tunnel hold crystals, relic-adjacent loot and tougher enemy nests.
+Each depth starts at the top-left area and ends at a descent hole lower down. Dropping in finishes the depth.
+The tall shafts are traversed with ledges, one-way planks, jump pads/staircases and moving lifts. Some shafts go up, so the route isn't just "fall".
+Cave look
+The world is dark outside the player's lantern radius.
+Light also comes from lava, crystals, glow-moss, beacons and muzzle flashes. This is done with an offscreen darkness mask and radial cut-outs.
+The world is squares; living things are not.
+Everything static is drawn on the square tile grid: rock, lava, planks, moss, crystals at rest and beacons.
+The background is squares too: a dimmer, parallax-scrolled layer of square back-wall tiles. There are no curved silhouettes or smooth stalactites.
+Squares can vary in shade and carry square-pixel detail, but the blocky grid stays obvious.
+Living and moving things ignore the grid. The player, enemies, bullets, sparks, drops and particles move freely in continuous coordinates. They can be any shape: circles, polygons, or a body with legs or wings. Moving lifts slide smoothly but are still drawn as rows of squares.
+Rock is in browns and slates. The player and shots are cyan, enemies are warm red/amber, and drips and dust particles fill the air.
+This is deliberately unlike n-gon's white line-art.
+Controls
+WASD/arrows to move.
+W/Space to jump: holding jumps higher, with coyote time and jump buffering.
+Mouse to aim; click or hold to fire.
+Shift to dash (while Blink has charges).
+Esc to pause.
+Health and healing (n-gon theme, not its heal powerup)
+You have an HP bar, with brief invulnerability after a hit.
+Life sparks sometimes drop from kills and drift toward you.
+Lighting a beacon heals you to full. Beacons are a one-time heal; there are no respawn points.
+Enemies
+Each enemy has HP, flashes when hit, and on death bursts into fragments plus a light flash, sometimes dropping a spark:
+
+Crawler: patrols ledges.
+Bat: a flyer that swoops once it sees you.
+Spitter: wall- or ceiling-mounted, lobs arcing acid.
+Brute: tanky, charges when you're level with it.
+Grub nest: spawns crawlers until destroyed.
+Warden: a multi-phase boss at Depth 5.
+Powerups (all new, not n-gon's)
+These are crystals found in levels or rare drops. "Permanent" means for the rest of the run. Picking up a permanent one you already have heals you instead.
+
+Splitter (permanent): shots fork into 3.
+Ricochet (permanent): shots bounce off rock twice.
+Overclock (20s): fire rate ×2.
+Featherfall (45s): a double jump and a glide.
+Aegis (until used): absorbs the next 2 hits.
+Blink (3 charges): each Shift press dashes through enemies and uses a charge. The pickup ends when all 3 are spent.
+Flare (10s): a huge light radius that reveals side pockets.
+Because Splitter and Ricochet are permanent, they are rarer: at most one fixed spot per depth, plus a low drop chance.
+
+Per-run variant spots
+These markers in the level strings are rolled with a seeded RNG at run start:
+
+L: a block that becomes lava at about 8%. It is only placed where it isn't the sole foothold.
+J: a jump pad or a staircase. Both reach the same ledge.
+?: an enemy slot that may roll empty or roll one of the allowed types.
+*: a crystal slot that may roll a random powerup or nothing.
+A scratchpad reachability check runs over every depth with every variant at its worst case, so each depth is guaranteed completable.
+
+Files
+New folder delve/, which shares nothing with the other games:
+
+index.html: the canvas (960×544, scaled to fit), a HUD (HP, depth, active powerups with timers or charges, relics, kills, time), overlays (title/run start, relic pick, pause, death, run over, victory), and the ← All games back link in the same corner as tank-duel/index.html.
+style.css: the cave theme.
+levels.js: the depth row-strings plus a legend comment. They are generated by a scratchpad script that keeps rows aligned. The existing small draft generator gets replaced by a tunnel-oriented one.
+game.js: input, fixed-timestep physics, tile collision (x then y, one-way planks), variant rolling, the run and relic state, the player, bullets, enemy AI per type, powerups, drops, lighting, particles, camera, rendering and saving.
+README.md: in the shape of tank-duel/README.md.
+thumbnail.webp: a real in-game capture taken with headless Chromium through canvas.toDataURL('image/webp').
+Edits:
+
+index.html (landing):
+Add a fifth card (.dv, its own palette) and change "Four browser games" to "Five".
+Change the shelf grid from its divides-by-four rule to 6 tracks: 3 cards on top and 2 wider below. At 2 columns the last card spans the full row. Update the comment to match.
+README.md: add a table row and a per-game README link, change "Four" to "Five", and fix the Layout tree, which is also missing tank-duel/.
+CLAUDE.md: change "Four" to "Five" and add Delve to the list.
+Shipping
+Commit on claude/wizardly-pasteur-hnandj, push, and open a PR. Then fetch the Vercel preview for that exact commit SHA (project s-and-a-gam, team aaas5) and include it in the reply.
+
+Verification
+Serve with node .claude/serve.js . 4173.
+Run a Playwright script with Chromium at /opt/pw-browsers/chromium that:
+loads /delve/ with no console errors;
+scripts movement, jumping, aiming and firing;
+checks kill + burst, spark heal, powerup on/expiry, lava/spike damage, beacon heal, depth exit → relic pick, and that death ends the run and resets to Depth 1;
+screenshots each depth under forced seeds.
+Run the scratchpad reachability check over every depth with worst-case variant rolls.
+Check the landing page at 1400, 900 and 390px for the 3+2 / 2+2+1 / 1 layout and no horizontal scroll.
+Run git ls-files --eol delve to confirm LF only.
