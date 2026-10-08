@@ -176,6 +176,9 @@
     }
     for(let y = 0; y < H; y++) for(let x = 0; x < W; x++)
       if(tiles[y * W + x] === LAVA && (y === 0 || tiles[(y - 1) * W + x] !== LAVA)) L.lavaTops.push([x, y]);
+    // Tutorial enemies sleep until you enter their lesson room, and stay in it.
+    if(def.rooms) for(const f of foes){ const c = (f.x + f.w / 2) / T;
+      f.room = def.rooms.find(([a, b]) => c >= a && c < b); f.asleep = true; }
     lvl = L;
     const w = foes.find(f => f.type === 'W');
     if(w) lvl.arena = findArena(Math.floor((w.x + w.w / 2) / T), Math.floor((w.y + w.h / 2) / T));
@@ -512,7 +515,7 @@
 
   function damageFoe(f, n, push){
     if(f.type === 'W' && f.state === 'rest') n *= 1.5;
-    f.hp -= n; f.flash = 0.08;
+    f.hp -= n; f.flash = 0.08; f.asleep = false;
     if(f.type === 'W' && f.state === 'dormant') wakeWarden(f);
     if(f.type === 'B' && f.state === 'hang') f.state = 'swoop';
     if(f.type !== 'W' && f.type !== 'N' && f.type !== 'S') f.vx += Math.sign(push) * (f.type === 'R' ? 20 : 60);
@@ -578,7 +581,9 @@
     const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
     for(const f of foes){
       if(f.dead) continue;
-      f.flash = Math.max(0, f.flash - dt); f.t += dt; f.anim += dt;
+      f.flash = Math.max(0, f.flash - dt);
+      if(f.asleep){ const c = pcx / T; if(c >= f.room[0] && c < f.room[1]) f.asleep = false; else continue; }
+      f.t += dt; f.anim += dt;
       const cx = f.x + f.w / 2, cy = f.y + f.h / 2, dx = pcx - cx, dy = pcy - cy, dist = Math.hypot(dx, dy);
       if(dist > 900 && f.type !== 'W') continue; // far away foes sleep
       switch(f.type){
@@ -636,13 +641,16 @@
           if(f.cd <= 0 && dist < 420 && f.children < 3){
             f.cd = 3.5; f.children++;
             const c = spawnFoe('C', Math.floor(cx / T), Math.floor((f.y + f.h - 1) / T));
-            c.parent = f; c.vy = -260; c.dir = Math.sign(dx) || 1;
+            c.parent = f; c.room = f.room; c.vy = -260; c.dir = Math.sign(dx) || 1;
             burst(cx, f.y + 4, '#d08a50', 6, 0.4);
           }
           break;
         }
         case 'W': updateWarden(f, dt, dx, dy, dist, pcx, pcy); break;
       }
+      if(f.room){ const lo = f.room[0] * T, hi = f.room[1] * T - f.w;
+        if(f.x < lo || f.x > hi){ f.x = clamp(f.x, lo, hi); f.vx = 0; f.dir = f.x <= lo ? 1 : -1;
+          if(f.state === 'charge'){ f.state = 'stun'; f.t = 0; } } }
       if(!f.dead && overlap(f, player)) hurt(f.dmg, cx, f.type === 'W' ? 'Crushed by the Warden' : 'Killed by a ' + ({ C: 'crawler', B: 'bat', S: 'spitter', R: 'brute', N: 'grub nest' })[f.type]);
     }
     foes = foes.filter(f => !f.dead);

@@ -561,6 +561,9 @@ const DELVE_TUTORIAL = {
     { x: 364, y: 29, type: 'blink' },
     { x: 375, y: 29, type: 'flare' },
   ],
+  // Lesson rooms as [first column, column after the last]. Enemies sleep until
+  // you enter theirs, and never leave it.
+  rooms: [[1, 25], [25, 41], [41, 59], [59, 77], [77, 97], [97, 115], [115, 139], [139, 171], [171, 189], [189, 217], [217, 241], [241, 271], [271, 297], [297, 384], [384, 416], [416, 438], [438, 468], [468, 568], [568, 600]],
   relics: [
     { x: 482, y: 29, key: 'hide' },
     { x: 493, y: 29, key: 'flint' },
