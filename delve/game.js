@@ -353,7 +353,7 @@
     if(player.aegis > 0){
       player.aegis--; player.inv = 0.6;
       burst(player.x + 6, player.y + 11, POWERS.aegis.color, 10, 0.6);
-      floatText(player.x + 6, player.y - 6, player.aegis ? 'Aegis ×' + player.aegis : 'Aegis broke', POWERS.aegis.color);
+      floatText(player.x + 6, player.y - 6, player.aegis ? 'Aegis -1' : 'Aegis broke', POWERS.aegis.color);
       return true;
     }
     run.hp -= n; player.inv = 0.9; hurtFlash = 0.35; cam.shake = Math.max(cam.shake, 6);
