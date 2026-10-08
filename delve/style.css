@@ -239,6 +239,7 @@ kbd {
 #overlay .card:hover, #overlay .card:focus-visible { background: #2a1d12; }
 .card .name { font-weight: 800; color: var(--ember); }
 .card .what { font-weight: 400; font-size: 13px; color: var(--muted); }
+.card .owned { font-size: 12px; font-weight: 700; color: var(--moss); }
 .card kbd { align-self: flex-start; }
 
 @media (max-width: 640px) {
