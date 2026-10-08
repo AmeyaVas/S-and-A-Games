@@ -269,15 +269,15 @@
             <li><b>Recruit</b> at any station — your seat or a citadel you hold. New troops march next turn.</li>
             <li><b>Expand</b> from a station into a neighbouring Free Hold, for gold. As many as
                 you can pay for, though each one this turn costs more than the last.</li>
-            <li><b>Give orders</b> — click one of your regions, then click a highlighted neighbour.</li>
+            <li><b>Give orders</b> — click one of your regions, tick the units to send, then click a highlighted neighbour.</li>
             <li><b>End your turn</b> and watch everyone else move.</li>
           </ol>
         </section>
 
         <section class="gsec">
           <h4>Giving orders</h4>
-          <p>Clicking a region you own picks up everything that can still move. Untick
-             anyone you want left behind, then click a highlighted region.</p>
+          <p>Clicking a region you own selects none of its units. Tick the ones you want to
+             send (or press <b>All</b>), then click a highlighted region.</p>
           <p><b>Move / Attack</b> goes into a neighbour. <b>Bombard</b> (Ballistas only)
              shells an adjacent region without entering it and takes no return fire — but
              never captures. <b>Redeploy</b> rails unmoved troops anywhere in your own
@@ -895,13 +895,10 @@
 
     sel.region = r.id;
     clearOrders();
-    // Picking up a friendly stack you can actually move is the common case.
-    if (human() && r.owner === game.current) {
-      for (const u of r.units) if (u.mp > 0) sel.units.add(u.id);
-      afterSelectionChange();
-    } else {
-      syncRegion();
-    }
+    // Nothing is picked up until you choose it: tick units in the garrison
+    // list, or press All. Sending the whole stack by default emptied regions
+    // by accident.
+    syncRegion();
   }
 
   function onKey(e) {
