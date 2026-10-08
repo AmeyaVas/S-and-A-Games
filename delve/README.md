@@ -17,7 +17,7 @@ There's nothing to install. Just open `index.html` in a browser:
   xdg-open index.html    (Linux)
   ```
 
-Your records (deepest depth, best full run, total kills) are kept in `localStorage`. Some browsers refuse that to `file://` pages; the game still plays, it just won't remember. Serving the repo root over HTTP avoids it — see the [top-level README](../README.md).
+Your records (deepest depth, best full run on each difficulty, total kills) are kept in `localStorage`. Some browsers refuse that to `file://` pages; the game still plays, it just won't remember. Serving the repo root over HTTP avoids it — see the [top-level README](../README.md).
 
 ## Tutorial
 
@@ -70,6 +70,22 @@ The tutorial's signs switch to describing these controls too.
 4. **Break the Warden.** Depth 5 ends in its hollow, and the doorway out stays barred until it falls.
 
 Dying ends the run. The next one starts again at Depth 1 with fresh rolls and no relics.
+
+## Difficulty
+
+Pick one on the title screen (or after a run) before you begin. It is
+remembered, and best times are kept separately for each.
+
+| Difficulty | Starting HP | Damage you take | Enemy health |
+|---|---|---|---|
+| Noob | 200 | 40% | 60% |
+| Easy | 140 | 70% | 80% |
+| Medium | 100 | 100% | 100% |
+| Hard | 100 | 135% | 125% |
+| Expert | 75 | 170% | 150% |
+
+"Damage you take" covers everything — enemies, acid, spikes and lava. Enemy
+health includes the Warden. The tutorial always plays on Medium.
 
 ## Enemies
 
