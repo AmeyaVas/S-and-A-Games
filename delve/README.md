@@ -64,10 +64,6 @@ Touch controls appear by themselves on a touch screen. Hold the phone sideways
 Each stick appears wherever that thumb lands, so there is no exact spot to hit.
 The tutorial's signs switch to describing these controls too.
 
-Starting a game goes fullscreen where the browser allows it. iPhone Safari does
-not allow it for web pages, so on an iPhone tap **Share → Add to Home Screen**
-and play from the icon: Delve then opens as a fullscreen app with no browser bars.
-
 1. **Follow the moss.** Glow-moss lines the main route and lights up as you come near, so the way deeper is always the lit one. Side pockets off the tunnel hold crystals and tougher nests.
 2. **Stay alive.** Spikes and lava hurt badly but don't kill outright; only a bottomless pit does. Life sparks drift out of some kills and float toward you. Each beacon heals you to full once — there are no respawn points.
 3. **Walk through the doorway** at the end of a depth, then pick one of three relics. Relics last for the rest of the run.
