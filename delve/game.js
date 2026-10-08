@@ -176,6 +176,15 @@
     }
     for(let y = 0; y < H; y++) for(let x = 0; x < W; x++)
       if(tiles[y * W + x] === LAVA && (y === 0 || tiles[(y - 1) * W + x] !== LAVA)) L.lavaTops.push([x, y]);
+    // Moss needs something to grow on, judged after the rolls: a floor of rock,
+    // pad or plank (side 0), else rock to the left (-1) or right (1). Moss over
+    // a pit, lava or open air is dropped rather than drawn floating.
+    const rock = (x, y) => x >= 0 && x < W && y < H && (tiles[y * W + x] === ROCK || tiles[y * W + x] === PAD);
+    L.moss = L.moss.filter(m => {
+      m.side = rock(m.x, m.y + 1) || tiles[(m.y + 1) * W + m.x] === PLANK ? 0
+        : rock(m.x - 1, m.y) ? -1 : rock(m.x + 1, m.y) ? 1 : null;
+      return m.side !== null;
+    });
     // Tutorial enemies sleep until you enter their lesson room, and stay in it.
     if(def.rooms) for(const f of foes){ const c = (f.x + f.w / 2) / T;
       f.room = def.rooms.find(([a, b]) => c >= a && c < b); f.asleep = true; }
@@ -921,10 +930,9 @@
       const px = m.x * T, py = m.y * T;
       if(!inView(px, py, 40)) continue;
       const pulse = 0.85 + 0.15 * Math.sin(time * 2 + m.x * 0.7), a = Math.max(0.15, m.lit) * pulse;
-      const below = solidAt(m.x, m.y + 1);
       ctx.fillStyle = `rgba(143,220,106,${a})`;
-      if(below){ ctx.fillRect(px + 1, py + 12, 4, 4); ctx.fillRect(px + 7, py + 10, 4, 6); ctx.fillRect(px + 12, py + 13, 3, 3); }
-      else { const lx = solidAt(m.x - 1, m.y) ? px : px + 12; ctx.fillRect(lx, py + 2, 4, 4); ctx.fillRect(lx, py + 9, 4, 5); }
+      if(m.side === 0){ ctx.fillRect(px + 1, py + 12, 4, 4); ctx.fillRect(px + 7, py + 10, 4, 6); ctx.fillRect(px + 12, py + 13, 3, 3); }
+      else { const lx = m.side < 0 ? px : px + 12; ctx.fillRect(lx, py + 2, 4, 4); ctx.fillRect(lx, py + 9, 4, 5); }
       if(m.lit > 0.2) lights.push([px + 8, py + 12, 44 * m.lit, 0.75 * m.lit, '143,220,106']);
     }
 
