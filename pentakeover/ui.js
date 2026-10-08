@@ -927,7 +927,10 @@
   /* Dragging the handle on the map's trailing edge resizes the pane: the
    * sidebar column while there is room for one, the map's own height once the
    * layout has stacked. Both land on a custom property #main already reads. */
-  const STACKED = () => window.matchMedia('(max-width: 900px)').matches;
+  // A phone on its side is narrow but short: it keeps the side-by-side layout
+  // (see the matching rule at the end of style.css) rather than stacking.
+  const STACKED = () => window.matchMedia('(max-width: 900px)').matches &&
+    !window.matchMedia('(orientation: landscape) and (max-height: 560px)').matches;
   const MIN_SIDE = 260, MAX_SIDE = 560;
   const MIN_MAP = 180;
   let mapHPinned = false;   // true once the player has sized the map themselves
