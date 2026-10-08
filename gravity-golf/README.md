@@ -6,6 +6,8 @@ double-click `index.html` to play in any browser.
 ## How to play
 
 - **Drag back from the ball and release** to putt (slingshot style).
+  On a phone or tablet, touch **anywhere** on the board and pull back: the shot is
+  measured from where your finger landed, so there is always room to pull.
   The dotted line previews your path; the ring around the ball shows power.
 - Planets **pull** the ball with real gravity — bank shots off their wells,
   slingshot around them, or hit one dead-on and bounce straight back.

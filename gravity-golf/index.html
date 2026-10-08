@@ -322,7 +322,7 @@ function loadProgress(){
     hadSave = true;
   }catch(e){}
 }
-let ball, restPos, sunk, aiming, aimStart, aimNow, confetti = [], stars = [];
+let ball, restPos, sunk, aiming, aimStart, aimNow, touchAim = false, confetti = [], stars = [];
 let flagWave = 0;
 
 function makeStars(){
@@ -401,6 +401,10 @@ function syncHUD(){
 }
 
 // ---------- input ----------
+const HINT = matchMedia('(pointer: coarse)').matches
+  ? 'Touch anywhere, pull back and release to putt. Planets pull — use them.'
+  : 'Drag back from the ball and release to putt. Planets pull — use them.';
+document.getElementById('hint').textContent = HINT;
 function canvasPos(e){
   const r = cv.getBoundingClientRect();
   const p = e.touches ? e.touches[0] : e;
@@ -409,11 +413,22 @@ function canvasPos(e){
 function speed(o){ return Math.hypot(o.vx,o.vy); }
 function ballAtRest(){ return speed(ball) < REST_SPEED; }
 
+// With a mouse you grab the ball and pull back from it. A finger cannot leave
+// the glass, and every tee sits near an edge, so pulling away from the hole ran
+// off the screen. On touch the pull starts wherever the finger lands instead:
+// the shot is the same vector, measured from that spot rather than the ball.
 function onDown(e){
+  if(e.touches && e.touches.length > 1){ aiming = false; return; }
   if(sunk || !ballAtRest()) return;
   const p = canvasPos(e);
+  if(e.touches){
+    if(e.touches.length > 1){ aiming = false; return; } // a second finger calls the shot off
+    aiming = true; touchAim = true; aimStart = p; aimNow = p;
+    e.preventDefault();
+    return;
+  }
   if(Math.hypot(p.x-ball.x, p.y-ball.y) > 46) return; // must grab near ball
-  aiming = true; aimStart = {x:ball.x,y:ball.y}; aimNow = p;
+  aiming = true; touchAim = false; aimStart = {x:ball.x,y:ball.y}; aimNow = p;
   e.preventDefault();
 }
 function onMove(e){
@@ -446,6 +461,7 @@ window.addEventListener('mouseup',onUp);
 cv.addEventListener('touchstart',onDown,{passive:false});
 cv.addEventListener('touchmove',onMove,{passive:false});
 window.addEventListener('touchend',onUp);
+window.addEventListener('touchcancel',() => { aiming = false; });
 
 document.getElementById('btn-retry').onclick = () => {
   // undo this hole's contribution isn't tracked mid-hole; just reload
@@ -726,6 +742,12 @@ function draw(dt){
     ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.moveTo(ball.x,ball.y);
     ctx.lineTo(ball.x-Math.cos(ang)*d, ball.y-Math.sin(ang)*d); ctx.stroke();
+    // on touch, where the pull started and how far the finger has gone
+    if(touchAim){
+      ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(aimStart.x, aimStart.y, 16, 0, 6.2832); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(aimStart.x, aimStart.y); ctx.lineTo(aimNow.x, aimNow.y); ctx.stroke();
+    }
     // power meter ring
     ctx.strokeStyle=`hsl(${140-140*(d/MAX_PULL)},90%,60%)`; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(ball.x,ball.y,13,-1.57,-1.57+6.2832*(d/MAX_PULL)); ctx.stroke();
@@ -780,8 +802,7 @@ function frame(now){
   confetti = confetti.filter(c=>c.life>0);
 
   if(hintTimer>0){ hintTimer -= dt; if(hintTimer<=0)
-    document.getElementById('hint').textContent =
-      'Drag back from the ball and release to putt. Planets pull — use them.'; }
+    document.getElementById('hint').textContent = HINT; }
 
   draw(dt);
   requestAnimationFrame(frame);
