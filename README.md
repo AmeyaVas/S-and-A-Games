@@ -1,6 +1,6 @@
 # S & A Games
 
-Four browser games in one repo. None has a build step, a package manager, or a
+Five browser games in one repo. None has a build step, a package manager, or a
 single dependency — every game is plain HTML, CSS and JavaScript, and runs by
 opening a file.
 
@@ -10,14 +10,16 @@ opening a file.
 | [**Castle Defense**](tower-defense/) | Pixel-art tower defense. Four upgradable turret types, a boss every tenth wave, 100 waves to survive. |
 | [**Pentakeover**](pentakeover/) | Turn-based territory conquest. Five unit types, five factions, five citadels on a procedural map. Computer opponents or hotseat. |
 | [**Tank Duel**](tank-duel/) | Two-player artillery for one keyboard. Set an angle and a power, fire over the hill, and crater the ground you are both standing on. |
+| [**Delve**](delve/) | Cave roguelite platformer. Five depths of winding tunnels and tall shafts, one life, mouse-aimed shots, crystal powerups, relics between depths and a Warden at the bottom. |
 
 Each game has its own README with full instructions:
 [Gravity Golf](gravity-golf/README.md) · [Castle Defense](tower-defense/README.md) ·
-[Pentakeover](pentakeover/README.md) · [Tank Duel](tank-duel/README.md).
+[Pentakeover](pentakeover/README.md) · [Tank Duel](tank-duel/README.md) ·
+[Delve](delve/README.md).
 
 ## Playing
 
-Open either game's `index.html` in a browser — double-click it, or:
+Open any game's `index.html` in a browser — double-click it, or:
 
 ```sh
 start gravity-golf/index.html    # Windows
@@ -57,7 +59,9 @@ and attaching a build to a project that has nothing to build.
 ├─ index.html         landing page linking to every game
 ├─ gravity-golf/      Gravity Golf, self-contained
 ├─ tower-defense/     Castle Defense, self-contained
-└─ pentakeover/       Pentakeover, self-contained
+├─ pentakeover/       Pentakeover, self-contained
+├─ tank-duel/         Tank Duel, self-contained
+└─ delve/             Delve, self-contained
 ```
 
 Each game owns its folder completely and shares no code with the others. That is

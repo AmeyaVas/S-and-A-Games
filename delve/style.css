@@ -1,0 +1,250 @@
+/* Delve — a lantern in a cave.
+
+   Gravity Golf is glass, Castle Defense carved wood, Pentakeover an engraved
+   plate, Tank Duel painted steel. This one is wet stone: brown-slate panels,
+   a glow-moss green for anything that guides you, and the player's cyan for
+   anything that is yours. Everything outside the canvas stays dim so the
+   lantern-lit cave is the brightest thing on the page. */
+
+:root {
+  --ground: #0a0908;
+  --plate: #15130f;
+  --edge: #2e2a22;
+  --ink: #e6e1d6;
+  --muted: #8f877a;
+  --moss: #8fdc6a;
+  --cyan: #5fe3f0;
+  --ember: #f08a3c;
+  --hurt: #e0503c;
+
+  --num: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: radial-gradient(ellipse at 50% -20%, #1d1a14, var(--ground) 70%);
+  color: var(--ink);
+  font: 14px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 16px 16px;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Back to the landing page. Same corner and size as the other games. */
+.back {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1px;
+  padding: 7px 11px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--plate);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.back:hover, .back:focus-visible { color: var(--moss); border-color: var(--moss); outline: none; }
+
+/* The canvas keeps 960x544 and scales down to whatever the window allows,
+   leaving room for the HUD above and the tray below. */
+#app {
+  width: min(960px, calc(100vw - 32px), calc((100vh - 150px) * 960 / 544));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .5em;
+  text-transform: uppercase;
+  color: var(--moss);
+  text-shadow: 0 0 12px #8fdc6a55;
+  padding-left: .5em;
+}
+
+.lbl {
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hp { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.track {
+  flex: 1;
+  max-width: 220px;
+  height: 10px;
+  background: #241f19;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#hpFill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3fb7c4, var(--cyan));
+  transition: width .15s ease;
+}
+
+#hpFill.low { background: linear-gradient(90deg, #a8382a, var(--hurt)); }
+
+.hp b, .stat b { font-family: var(--num); font-size: 14px; color: var(--ink); }
+
+.stats { display: flex; justify-content: flex-end; gap: 16px; flex-wrap: wrap; }
+
+#stage {
+  position: relative;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #050404;
+  aspect-ratio: 960 / 544;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#tray {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+  flex-wrap: wrap;
+}
+
+#powers, #relics { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.chip {
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--c, var(--edge));
+  border-radius: 3px;
+  background: var(--plate);
+  color: var(--c, var(--muted));
+  white-space: nowrap;
+}
+
+.chip b { font-family: var(--num); color: var(--ink); margin-left: 4px; }
+
+.relic { --c: var(--ember); }
+
+/* Overlays: title, relic pick, pause, death and victory share one panel. */
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 40%, #0a0908c0, #050404f2 75%);
+}
+
+#overlay[hidden] { display: none; }
+
+#overlay h2 {
+  font-size: clamp(26px, 5vw, 44px);
+  font-weight: 800;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  padding-left: .35em;
+  color: var(--moss);
+  text-shadow: 0 0 18px #8fdc6a66;
+}
+
+#overlay h2.bad { color: var(--hurt); text-shadow: 0 0 18px #e0503c66; }
+#overlay h2.good { color: var(--cyan); text-shadow: 0 0 18px #5fe3f066; }
+
+#overlay p { color: var(--muted); max-width: 560px; }
+#overlay p b { color: var(--ink); font-family: var(--num); }
+
+#overlay .keys { font-size: 12px; line-height: 2; }
+
+kbd {
+  font-family: var(--num);
+  font-size: 11px;
+  padding: 1px 5px;
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--plate);
+  color: var(--ink);
+}
+
+#overlay button {
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border: 1px solid var(--moss);
+  border-radius: 3px;
+  background: #1b2414;
+  color: var(--moss);
+  cursor: pointer;
+}
+
+#overlay button:hover, #overlay button:focus-visible { background: #26361b; outline: none; }
+#overlay button.quiet { border-color: var(--edge); background: var(--plate); color: var(--muted); }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* Relic cards: three across, each a button. */
+.relics { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 12px; }
+
+#overlay .card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  text-align: left;
+  padding: 14px;
+  border-color: var(--ember);
+  background: #1d150e;
+  color: var(--ink);
+}
+
+#overlay .card:hover, #overlay .card:focus-visible { background: #2a1d12; }
+.card .name { font-weight: 800; color: var(--ember); }
+.card .what { font-weight: 400; font-size: 13px; color: var(--muted); }
+.card kbd { align-self: flex-start; }
+
+@media (max-width: 640px) {
+  .relics { grid-template-columns: 1fr; }
+  #overlay { gap: 8px; padding: 12px; }
+  #overlay .keys { display: none; }
+  h1 { display: none; }
+  #hud { grid-template-columns: 1fr auto; }
+}
