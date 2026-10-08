@@ -328,7 +328,11 @@
   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
   // ---------------------------------------------------------------- player
-  const has = k => !!(run && run.perm[k]);
+  // Permanent crystals stack: each Splitter adds a shot (3, 4, 5...), each
+  // Ricochet adds a bounce (2, 3, 4...).
+  const has = k => (run && run.perm[k]) || 0;
+  const shotCount = () => has('splitter') ? 2 + has('splitter') : 1;
+  const bounces = () => has('ricochet') ? 1 + has('ricochet') : 0;
   const timed = k => player.timers[k] > 0;
 
   function heal(n){ if(!run) return; const before = run.hp; run.hp = Math.min(run.maxHp, run.hp + n);
@@ -460,9 +464,9 @@
       p.fireCd = FIRE_GAP / rate;
       const ox = p.x + 6, oy = p.y + 9, a = Math.atan2(aimY - oy, aimX - ox);
       const dmg = SHOT_DMG * (1 + 0.3 * (run.relics.flint || 0));
-      const spread = has('splitter') ? [-0.16, 0, 0.16] : [0];
+      const n = shotCount(), spread = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * 0.16);
       for(const s of spread) bullets.push({ x: ox + Math.cos(a) * 10, y: oy + Math.sin(a) * 10,
-        vx: Math.cos(a + s) * SHOT_V, vy: Math.sin(a + s) * SHOT_V, life: SHOT_LIFE, dmg, bounce: has('ricochet') ? 2 : 0 });
+        vx: Math.cos(a + s) * SHOT_V, vy: Math.sin(a + s) * SHOT_V, life: SHOT_LIFE, dmg, bounce: bounces() });
       flashes.push({ x: ox + Math.cos(a) * 12, y: oy + Math.sin(a) * 12, r: 70, life: 0.06, max: 0.06, color: '95,227,240' });
     }
   }
@@ -725,14 +729,19 @@
     const P = POWERS[k], dur = 1 + 0.4 * (run.relics.candle || 0);
     burst(player.x + 6, player.y + 11, P.color, 14, 0.6);
     flashes.push({ x: player.x + 6, y: player.y + 11, r: 160, life: 0.4, max: 0.4, color: '255,255,255' });
+    // A crystal you already hold stacks onto what you have.
+    let again = '';
     if(P.perm){
-      if(run.perm[k]){ heal(30); showToast(P.name + ' again — healed'); return; }
-      run.perm[k] = true;
+      run.perm[k] = (run.perm[k] || 0) + 1;
+      if(run.perm[k] > 1) again = k === 'splitter' ? `shots fork into ${shotCount()}` : `shots bounce ${bounces()} times`;
     }
-    else if(P.time) player.timers[k] = P.time * dur;
-    else if(k === 'aegis') player.aegis = 2;
-    else if(k === 'blink') player.blink = 3;
-    showToast(P.name + ' — ' + P.what);
+    else if(P.time){
+      if(player.timers[k] > 0) again = `+${Math.round(P.time * dur)}s`;
+      player.timers[k] = Math.max(0, player.timers[k] || 0) + P.time * dur;
+    }
+    else if(k === 'aegis'){ if(player.aegis > 0) again = '+1 hit'; player.aegis += player.aegis > 0 ? 1 : 2; }
+    else if(k === 'blink'){ if(player.blink > 0) again = '+2 dashes'; player.blink += player.blink > 0 ? 2 : 3; }
+    showToast(P.name + ' — ' + (again || P.what));
   }
 
   // ---------------------------------------------------------------- particles
@@ -1187,10 +1196,11 @@
   function hud(){
     if(!run) return;
     const p = player, chips = [];
-    for(const k of ['splitter', 'ricochet']) if(run.perm[k]) chips.push(chip(k, ''));
+    if(has('splitter')) chips.push(chip('splitter', shotCount() + ' shots'));
+    if(has('ricochet')) chips.push(chip('ricochet', bounces() + ' bounces'));
     for(const k of ['overclock', 'feather', 'flare']) if(p.timers[k] > 0) chips.push(chip(k, Math.ceil(p.timers[k]) + 's'));
     if(p.aegis > 0) chips.push(chip('aegis', '×' + p.aegis));
-    if(p.blink > 0) chips.push(chip('blink', '●'.repeat(p.blink) + '○'.repeat(3 - p.blink)));
+    if(p.blink > 0) chips.push(chip('blink', p.blink > 3 ? '×' + p.blink : '●'.repeat(p.blink) + '○'.repeat(3 - p.blink)));
     const relics = Object.entries(run.relics).map(([k, n]) => `<span class="chip relic" title="${RELICS[k].what}">${RELICS[k].name}${n > 1 ? '<b>×' + n + '</b>' : ''}</span>`);
     const s = [Math.ceil(Math.max(0, run.hp)), run.maxHp, run.depth, run.kills, Math.floor(run.time), chips.join(''), relics.join('')].join('|');
     if(s === hudCache) return; hudCache = s;
@@ -1256,7 +1266,7 @@
   // Test hooks for the headless checks; the game never reads them.
   window.__delve = {
     get mode(){ return mode; }, get run(){ return run; }, get player(){ return player; }, get lvl(){ return lvl; },
-    get foes(){ return foes; }, get drops(){ return drops; }, get frags(){ return frags; }, get cam(){ return cam; },
+    get foes(){ return foes; }, get bullets(){ return bullets; }, get drops(){ return drops; }, get frags(){ return frags; }, get cam(){ return cam; },
     newRun, startTutorial, chooseRelic, grant, spawnFoe, killFoe, hurt, depthCleared, step,
     goto(i){ enterDepth(i); setMode('play'); },
     T, tiles: { AIR, ROCK, PLANK, SPIKE, LAVA, PAD, VOID, EXIT },

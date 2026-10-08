@@ -529,7 +529,7 @@ const DELVE_TUTORIAL = {
     { x: 224, y: 23, text: "Spitters cling to rock and lob\narcing acid. Keep moving." },
     { x: 249, y: 23, text: "Brutes are tough, and charge when\nyou are level with them.\nJump over the charge." },
     { x: 279, y: 23, text: "Grub nests keep spawning crawlers\nuntil you destroy them." },
-    { x: 306, y: 20, text: "Crystals are powerups. Walk into one to take it.\nA permanent one you already have heals you instead." },
+    { x: 306, y: 20, text: "Crystals are powerups. Walk into one to take it.\nOne you already have stacks: more shots, bounces or time." },
     { x: 309, y: 24, text: "Splitter\nshots fork in three\npermanent" },
     { x: 320, y: 24, text: "Ricochet\nshots bounce off rock\npermanent" },
     { x: 331, y: 24, text: "Overclock\ndouble fire rate\n20 s" },
