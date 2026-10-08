@@ -71,8 +71,9 @@ Crystals sit in the levels and occasionally drop from kills. *Permanent* means f
 
 Picking up a crystal you already have stacks it: another Splitter adds a shot
 (three, then four, then five), another Ricochet adds a bounce, another Blink adds
-two dashes, another Aegis blocks one more hit, and a timed one adds its time to
-what is left.
+two dashes, another Aegis blocks two more hits, and a timed one adds its time to
+what is left. Splitter and Ricochet stop at three pickups; one past that heals
+you instead.
 
 | Crystal | Effect |
 |---|---|

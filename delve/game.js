@@ -328,8 +328,9 @@
   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
   // ---------------------------------------------------------------- player
-  // Permanent crystals stack: each Splitter adds a shot (3, 4, 5...), each
-  // Ricochet adds a bounce (2, 3, 4...).
+  // Permanent crystals stack up to three pickups: Splitter fires 3, 4 then 5
+  // shots, Ricochet bounces 2, 3 then 4 times. Past that a pickup heals.
+  const PERM_CAP = 3;
   const has = k => (run && run.perm[k]) || 0;
   const shotCount = () => has('splitter') ? 2 + has('splitter') : 1;
   const bounces = () => has('ricochet') ? 1 + has('ricochet') : 0;
@@ -732,6 +733,7 @@
     // A crystal you already hold stacks onto what you have.
     let again = '';
     if(P.perm){
+      if(run.perm[k] >= PERM_CAP){ heal(30); showToast(P.name + ' is maxed — healed'); return; }
       run.perm[k] = (run.perm[k] || 0) + 1;
       if(run.perm[k] > 1) again = k === 'splitter' ? `shots fork into ${shotCount()}` : `shots bounce ${bounces()} times`;
     }
@@ -739,7 +741,7 @@
       if(player.timers[k] > 0) again = `+${Math.round(P.time * dur)}s`;
       player.timers[k] = Math.max(0, player.timers[k] || 0) + P.time * dur;
     }
-    else if(k === 'aegis'){ if(player.aegis > 0) again = '+1 hit'; player.aegis += player.aegis > 0 ? 1 : 2; }
+    else if(k === 'aegis'){ if(player.aegis > 0) again = '+2 hits'; player.aegis += 2; }
     else if(k === 'blink'){ if(player.blink > 0) again = '+2 dashes'; player.blink += player.blink > 0 ? 2 : 3; }
     showToast(P.name + ' — ' + (again || P.what));
   }
