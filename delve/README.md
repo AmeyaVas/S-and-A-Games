@@ -19,6 +19,20 @@ There's nothing to install. Just open `index.html` in a browser:
 
 Your records (deepest depth, best full run, total kills) are kept in `localStorage`. Some browsers refuse that to `file://` pages; the game still plays, it just won't remember. Serving the repo root over HTTP avoids it — see the [top-level README](../README.md).
 
+## Tutorial
+
+The first time you press **Begin descent** you go through *The Training Tunnel*
+instead: one long cave of lesson rooms with the instructions painted on the
+walls. It walks through moving, jumping, planks, pits, shooting, spikes, lava,
+life sparks, beacons, every enemy, every crystal, pads and staircases, lifts,
+glow-moss, every relic and the Warden. Dying there puts you back at the last
+sign you passed, and nothing in it counts towards your records.
+
+Finishing it (or **Skip tutorial** from the pause menu) is remembered, so later
+visits go straight to Depth 1. Anyone who had already played before the
+tutorial existed skips it too. The **Tutorial** button on the title screen
+replays it whenever you like.
+
 ## How to play
 
 | Key | Does |

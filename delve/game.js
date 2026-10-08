@@ -116,12 +116,15 @@
 
   // ---------------------------------------------------------------- level
   // Parse a depth's rows into tiles and entities, rolling every variant spot.
+  // Index -1 is the tutorial, which rolls nothing.
+  const TUTORIAL = -1;
   function loadDepth(index){
-    const def = DELVE_LEVELS[index], rows = def.rows, H = rows.length, W = rows[0].length;
+    const def = index === TUTORIAL ? DELVE_TUTORIAL : DELVE_LEVELS[index], rows = def.rows, H = rows.length, W = rows[0].length;
     const r = mulberry((run ? run.seed : 1) ^ Math.imul(index + 1, 0x9E3779B1));
     const tiles = new Uint8Array(W * H);
     const L = { index, def, W, H, tiles, moss: [], lifts: [], beacons: [], sealed: def.boss,
-      arena: null, start: [0, 0], canvas: null, lavaTops: [], exitCells: [] };
+      arena: null, start: [0, 0], canvas: null, lavaTops: [], exitCells: [],
+      pal: PALETTES[Math.max(0, index) % PALETTES.length], signs: (def.signs || []).slice().sort((a, b) => a.x - b.x), stands: [] };
     foes = []; bullets = []; hostile = []; drops = []; parts = []; frags = []; flashes = []; texts = [];
 
     // J/P groups: J cells cluster by touch; each P joins the nearest cluster.
@@ -152,7 +155,7 @@
         case 'X': t = EXIT; L.exitCells.push([x, y]); break;
         case 'L': t = r() < 0.08 ? LAVA : ROCK; break;
         case 'J': t = groupOf.get(x + ',' + y).pad ? AIR : ROCK; break;
-        case 'P': { const g = padGroup(x, y); t = g && g.pad ? PAD : ROCK; break; }
+        case 'P': { const g = padGroup(x, y); t = def.tutorial || (g && g.pad) ? PAD : ROCK; break; }
         case 'm': L.moss.push({ x, y, lit: 0 }); break;
         case '@': L.start = [px, py]; break;
         case 'b': L.beacons.push({ x: px, y: py, lit: false }); break;
@@ -165,6 +168,8 @@
       }
       tiles[i] = t;
     }
+    for(const c of def.crystals || []) drops.push({ kind: 'crystal', type: c.type, x: c.x * T + T / 2, y: c.y * T + T - 8, rest: true });
+    for(const s of def.relics || []) L.stands.push({ x: s.x * T + T / 2, y: s.y * T + T, key: s.key });
     for(const [x, y] of liftTops){
       let by = y + 1; while(by < H && rows[by][x] !== 't') by++;
       L.lifts.push({ x: x * T, w: 3 * T, top: y * T, bottom: by * T, y: by * T, dy: 0, dir: -1, wait: 1 });
@@ -202,6 +207,24 @@
     setMode('play');
   }
 
+  // The tutorial is a run of its own: nothing it does reaches the records,
+  // and dying there puts you back at the last sign you passed.
+  function startTutorial(){
+    run = { seed: 1, depth: TUTORIAL, tutorial: true, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
+      rng: mulberry(1), checkpoint: -1, respawn: null };
+    player = null;
+    enterDepth(TUTORIAL);
+    setMode('play');
+  }
+
+  function finishTutorial(){
+    save.tutorialDone = true; persist();
+    setMode('tutorialDone');
+  }
+
+  // First-timers go through the tutorial; anyone who has played goes straight down.
+  const begin = () => (save.tutorialDone || save.deepest) ? newRun() : startTutorial();
+
   function enterDepth(i){
     run.depth = i;
     loadDepth(i);
@@ -211,12 +234,13 @@
       inv: 1, fireCd: 0, dash: 0, dashDir: 1, walk: 0, timers: {}, aegis: 0, blink: 0, doubleUsed: false };
     if(keep){ player.timers = keep.timers; player.aegis = keep.aegis; player.blink = keep.blink; }
     if(run.relics.lungs) heal(30 * run.relics.lungs);
-    save.deepest = Math.max(save.deepest, i + 1); persist();
+    if(!run.tutorial){ save.deepest = Math.max(save.deepest, i + 1); persist(); }
     cam.x = clamp(player.x - VW / 2, 0, lvl.W * T - VW); cam.y = clamp(player.y - VH / 2, 0, lvl.H * T - VH);
-    showToast(`Depth ${i + 1} — ${lvl.def.name}`);
+    showToast(run.tutorial ? 'Tutorial — ' + lvl.def.name : `Depth ${i + 1} — ${lvl.def.name}`);
   }
 
   function depthCleared(){
+    if(run.tutorial){ finishTutorial(); return; }
     save.kills += run.kills - (run.savedKills || 0); run.savedKills = run.kills; persist();
     if(run.depth + 1 >= DEPTHS){
       if(!save.bestTime || run.time < save.bestTime) { save.bestTime = run.time; run.newBest = true; }
@@ -239,6 +263,15 @@
 
   function die(why){
     if(mode !== 'play') return;
+    if(run.tutorial){
+      // Back to the last sign passed, healed, with a moment of safety.
+      const [x, y] = run.respawn || [lvl.start[0] - 6, lvl.start[1] - 22];
+      burst(player.x + 6, player.y + 11, '#5fe3f0', 14, 0.9);
+      Object.assign(player, { x, y, vx: 0, vy: 0, inv: 1.5, onLift: null, dash: 0, knock: 0 });
+      run.hp = run.maxHp; hostile = [];
+      showToast(why + ' — try again');
+      return;
+    }
     run.hp = 0; run.cause = why;
     burst(player.x + 6, player.y + 11, '#5fe3f0', 18, 1.3);
     save.kills += run.kills - (run.savedKills || 0); run.savedKills = run.kills; persist();
@@ -385,6 +418,11 @@
         p.y = l.y - p.h; p.vy = 0; p.ground = true; p.onLift = l; break; }
     }
     if(p.ground){ p.doubleUsed = false; p.padLaunch = false; }
+    if(run.tutorial && p.ground && !p.onLift && landed !== PAD){
+      const s = lvl.signs[run.checkpoint + 1];
+      const safe = [p.x + 1, p.x + p.w - 1].every(x => { const t = tileAt(Math.floor(x / T), Math.floor((p.y + p.h - 1) / T)); return t !== SPIKE && t !== LAVA; });
+      if(s && safe && p.x > s.x * T){ run.checkpoint++; run.respawn = [p.x, p.y]; }
+    }
     if(landed === PAD){
       p.vy = -PAD_V; p.ground = false; p.padLaunch = true; p.cut = true;
       burst(p.x + 6, p.y + p.h, '#5ff0b0', 10, 0.5);
@@ -771,7 +809,7 @@
   // ---------------------------------------------------------------- render
   // The static cave is drawn once per depth onto a big offscreen canvas.
   function prerender(){
-    const { W, H, tiles } = lvl, pal = PALETTES[lvl.index % PALETTES.length].rock;
+    const { W, H, tiles } = lvl, pal = lvl.pal.rock;
     const c = lvl.canvas || document.createElement('canvas');
     c.width = W * T; c.height = H * T;
     const g = c.getContext('2d');
@@ -817,7 +855,7 @@
   function render(time){
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if(!lvl){ ctx.fillStyle = '#050404'; ctx.fillRect(0, 0, VW, VH); return; }
-    const pal = PALETTES[lvl.index % PALETTES.length];
+    const pal = lvl.pal;
     const sx = cam.shake ? rand(-cam.shake, cam.shake) * 0.5 : 0, sy = cam.shake ? rand(-cam.shake, cam.shake) * 0.5 : 0;
     const ox = Math.round(cam.x + sx), oy = Math.round(cam.y + sy);
     const lights = [];
@@ -877,6 +915,17 @@
       for(let i = 0; i < 3; i++){ ctx.fillStyle = '#8a7a5a'; ctx.fillRect(l.x + i * T, l.y, T, 6); ctx.fillStyle = '#b8a070'; ctx.fillRect(l.x + i * T + 1, l.y, T - 2, 2); }
       ctx.fillStyle = '#ffd166'; ctx.fillRect(l.x + l.w / 2 - 2, l.y + 6, 4, 3);
       lights.push([l.x + l.w / 2, l.y + 8, 40, 0.5, '255,210,120']);
+    }
+
+    // Relic stands in the tutorial: a stone plinth with an ember glyph.
+    for(const s of lvl.stands){
+      if(!inView(s.x, s.y, 60)) continue;
+      ctx.fillStyle = '#4e463c'; ctx.fillRect(s.x - 8, s.y - 10, 16, 10);
+      ctx.fillStyle = '#6a6052'; ctx.fillRect(s.x - 8, s.y - 10, 16, 2);
+      const bob = Math.sin(time * 2 + s.x) * 2;
+      ctx.fillStyle = '#f08a3c'; ctx.fillRect(s.x - 4, s.y - 22 + bob, 8, 8);
+      ctx.fillStyle = '#ffd9a0'; ctx.fillRect(s.x - 2, s.y - 20 + bob, 4, 4);
+      lights.push([s.x, s.y - 18, 60, 0.8, '240,138,60']);
     }
 
     // Beacons: stacked stones with a moss-green flame once lit.
@@ -969,7 +1018,9 @@
     ctx.save(); ctx.translate(-ox, -oy);
     ctx.font = 'bold 12px ui-monospace, Consolas, monospace'; ctx.textAlign = 'center';
     for(const t of texts){ ctx.globalAlpha = clamp(t.life / 0.4, 0, 1); ctx.fillStyle = t.color; ctx.fillText(t.s, t.x, t.y); }
-    ctx.globalAlpha = 1; ctx.restore();
+    ctx.globalAlpha = 1;
+    for(const s of lvl.signs) if(inView(s.x * T, s.y * T, 260)) drawSign(s);
+    ctx.restore();
     if(mode === 'play'){
       ctx.strokeStyle = 'rgba(95,227,240,0.85)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 7, 0, 6.283); ctx.stroke();
@@ -995,6 +1046,29 @@
       g.addColorStop(0, 'rgba(224,80,60,0)'); g.addColorStop(1, `rgba(224,80,60,${hurtFlash})`);
       ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
     }
+  }
+
+  // Tutorial signs are painted on the cave wall, OvO-style, and stay readable in
+  // the dark. Text in [brackets] is drawn as a key cap.
+  function drawSign(s){
+    const lines = s.text.split('\n'), LH = 18, cx = s.x * T + T / 2;
+    ctx.font = 'bold 13px ui-sans-serif, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const parts = lines.map(l => l.split(/(\[[^\]]+\])/).filter(Boolean));
+    const width = seg => seg.startsWith('[') ? ctx.measureText(seg.slice(1, -1)).width + 12 : ctx.measureText(seg).width;
+    const widths = parts.map(ps => ps.reduce((a, p) => a + width(p), 0));
+    const w = Math.max(...widths) + 20, h = lines.length * LH + 10, top = s.y * T - h / 2;
+    ctx.fillStyle = 'rgba(10,9,8,0.72)'; ctx.fillRect(cx - w / 2, top, w, h);
+    ctx.fillStyle = 'rgba(143,220,106,0.5)'; ctx.fillRect(cx - w / 2, top, 3, h);
+    parts.forEach((ps, i) => {
+      let x = cx - widths[i] / 2; const y = top + 5 + LH * i + LH / 2;
+      for(const p of ps){
+        if(p.startsWith('[')){ const k = p.slice(1, -1), kw = ctx.measureText(k).width + 8;
+          ctx.strokeStyle = '#8fdc6a'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 1, y - 9, kw, 18);
+          ctx.fillStyle = '#e8ffd0'; ctx.fillText(k, x + 5, y + 1); x += kw + 4; }
+        else { ctx.fillStyle = i === 0 ? '#e6e1d6' : '#c9c2b4'; ctx.fillText(p, x, y + 1); x += ctx.measureText(p).width; }
+      }
+    });
+    ctx.textBaseline = 'alphabetic';
   }
 
   const rgbCache = {};
@@ -1116,7 +1190,7 @@
     $('hpFill').style.width = (frac * 100) + '%';
     $('hpFill').classList.toggle('low', frac < 0.3);
     $('hpText').textContent = Math.ceil(Math.max(0, run.hp)) + '/' + run.maxHp;
-    $('depthText').textContent = (run.depth + 1) + '/' + DEPTHS;
+    $('depthText').textContent = run.tutorial ? 'Tutorial' : (run.depth + 1) + '/' + DEPTHS;
     $('killText').textContent = run.kills;
     const t = Math.floor(run.time); $('timeText').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     $('powers').innerHTML = chips.join('');
@@ -1134,11 +1208,15 @@
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
     if(m === 'title') html = `<h2>Delve</h2>
       <p>Five cave depths, one life. Follow the glow-moss down, light beacons to heal, take a relic at the bottom of every depth, and break the Warden at the end.</p>
-      ${keysHelp}${records}<div class="row"><button data-act="start">Begin descent</button></div>`;
+      ${keysHelp}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
       <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span></button>`).join('')}</div>`;
+    else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
+      <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button></div>`;
     else if(m === 'pause') html = `<h2>Paused</h2><p>Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button></div>`;
+    else if(m === 'tutorialDone') html = `<h2 class="good">Ready</h2><p>That's everything. A real run is five depths and one life: no checkpoints, fresh rolls every time, and a relic at the bottom of each depth.</p>
+      <div class="row"><button data-act="start">Begin descent</button></div>`;
     else if(m === 'dead') html = `<h2 class="bad">Run over</h2><p>${run.cause || 'The cave keeps you'} on depth <b>${run.depth + 1}</b> after <b>${fmtTime(run.time)}</b>, with <b>${run.kills}</b> kills.</p>
       <p>The next run starts again at Depth 1 with fresh rolls and no relics.</p>${records}<div class="row"><button data-act="start">Delve again</button></div>`;
     else if(m === 'won') html = `<h2 class="good">The Warden falls</h2><p>All five depths in <b>${fmtTime(run.time)}</b> with <b>${run.kills}</b> kills.${run.newBest ? ' A new best run.' : ''}</p>
@@ -1151,6 +1229,9 @@
     if(b.dataset.relic) chooseRelic(+b.dataset.relic);
     const a = b.dataset.act;
     if(a === 'start') newRun();
+    if(a === 'begin') begin();
+    if(a === 'tutorial') startTutorial();
+    if(a === 'skip'){ save.tutorialDone = true; persist(); newRun(); }
     if(a === 'resume') setMode('play');
     if(a === 'abandon'){ save.kills += run.kills - (run.savedKills || 0); run.savedKills = run.kills; persist(); run.cause = 'Abandoned'; setMode('dead'); }
   });
@@ -1168,7 +1249,7 @@
   window.__delve = {
     get mode(){ return mode; }, get run(){ return run; }, get player(){ return player; }, get lvl(){ return lvl; },
     get foes(){ return foes; }, get drops(){ return drops; }, get frags(){ return frags; }, get cam(){ return cam; },
-    newRun, chooseRelic, grant, spawnFoe, killFoe, hurt, depthCleared, step,
+    newRun, startTutorial, chooseRelic, grant, spawnFoe, killFoe, hurt, depthCleared, step,
     goto(i){ enterDepth(i); setMode('play'); },
     T, tiles: { AIR, ROCK, PLANK, SPIKE, LAVA, PAD, VOID, EXIT },
   };
