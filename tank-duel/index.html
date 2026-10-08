@@ -30,6 +30,7 @@
       </div>
     </header>
 
+    <div id="play">
     <div id="field">
       <canvas id="canvas" width="900" height="500"></canvas>
 
@@ -67,6 +68,24 @@
         <p id="overlaySub"></p>
         <button id="again">New match</button>
       </div>
+    </div>
+
+    <!-- Touch screens only: the same keys, as buttons. The aim buttons sweep
+         while held, exactly like holding the arrow key. -->
+    <div id="pad" aria-label="Touch controls">
+      <div class="padrow">
+        <span class="lbl">Angle</span>
+        <button type="button" data-key="ArrowUp" aria-label="Raise the barrel">&#9650;</button>
+        <button type="button" data-key="ArrowDown" aria-label="Lower the barrel">&#9660;</button>
+      </div>
+      <div class="padrow">
+        <span class="lbl">Power</span>
+        <button type="button" data-key="ArrowLeft" aria-label="Less power">&minus;</button>
+        <button type="button" data-key="ArrowRight" aria-label="More power">+</button>
+      </div>
+      <button type="button" id="padFire">Fire</button>
+      <button type="button" id="padNew" class="quiet">New match</button>
+    </div>
     </div>
 
     <footer id="dash">

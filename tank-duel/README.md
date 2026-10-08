@@ -34,6 +34,11 @@ is about to fire.
 
 Hold an arrow key rather than tapping it — the numbers sweep while it is held.
 
+On a phone or tablet the same controls appear as buttons under the field (or
+beside it, with the phone held sideways): **▲ ▼** for the angle, **− +** for the
+power, **Fire**, and **New match**. Hold an aim button and the number sweeps,
+just like holding the key. Pass the phone across when the turn changes.
+
 Up always *raises* the firing tank's barrel, whichever side it is on. The two
 tanks aim in opposite directions, so the key has to mean "raise" rather than a
 fixed direction of rotation, or it would be inverted for player 2.
