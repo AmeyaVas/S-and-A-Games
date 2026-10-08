@@ -67,7 +67,13 @@ Dying ends the run. The next one starts again at Depth 1 with fresh rolls and no
 
 ## Powerups
 
-Crystals sit in the levels and occasionally drop from kills. *Permanent* means for the rest of the run; picking up a permanent one you already have heals you instead.
+Crystals sit in the levels and occasionally drop from kills. *Permanent* means for the rest of the run.
+
+Picking up a crystal you already have stacks it: another Splitter adds a shot
+(three, then four, then five), another Ricochet adds a bounce, another Blink adds
+two dashes, another Aegis blocks two more hits, and a timed one adds its time to
+what is left. Splitter and Ricochet stop at three pickups; one past that heals
+you instead.
 
 | Crystal | Effect |
 |---|---|
