@@ -1342,7 +1342,7 @@
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
     if(m === 'title') html = `<h2>Delve</h2>
       <p>Five cave depths, one life. Follow the glow-moss down, light beacons to heal, take a relic at the bottom of every depth, and break the Warden at the end.</p>
-      ${keysHelp}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
+      ${keysHelp}${fullscreenTip()}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
       <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span>${run.relics[k] ? `<span class="owned">You have ×${run.relics[k]} of ${RELIC_CAP}</span>` : ''}</button>`).join('')}</div>`;
     else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
@@ -1362,6 +1362,16 @@
   // browser allows, locks to landscape. It needs the tap itself to be allowed,
   // so it hangs off the overlay buttons. Browsers without it (iPhone Safari)
   // just stay in the page.
+  // iPhone Safari has no fullscreen for pages; the way there is Add to Home
+  // Screen, which launches Delve as a web app with no browser bars. The title
+  // says so to touch players who cannot otherwise get it.
+  const fullscreenTip = () => {
+    const el = document.documentElement;
+    const canFullscreen = !!(el.requestFullscreen || el.webkitRequestFullscreen);
+    const installed = navigator.standalone === true || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+    return touchMode && !canFullscreen && !installed
+      ? '<p class="tip">For fullscreen on iPhone: tap Share, then <b>Add to Home Screen</b>, and play from the icon.</p>' : '';
+  };
   function goFullscreen(){
     if(!touchMode) return;
     const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
