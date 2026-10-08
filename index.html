@@ -34,11 +34,18 @@
   h1 span{color:var(--muted); font-weight:300}
   .tagline{color:var(--muted); margin-top:14px; font-size:clamp(14px,2.4vw,16px)}
 
-  /* Four across, two across or one across — every count divides four exactly,
-     so no card is ever stranded alone on a half-empty row. Three across is
-     deliberately skipped for the same reason. */
-  .shelf{display:grid; gap:clamp(16px,3vw,24px); grid-template-columns:repeat(4,1fr)}
-  @media (max-width:1180px){ .shelf{grid-template-columns:repeat(2,1fr)} }
+  /* Five cards on six tracks: three across the top (two tracks each) and two
+     wider ones below (three tracks each), so both rows end flush. At two
+     columns the fifth card spans the full last row rather than sitting alone
+     beside a hole, and at one column everything simply stacks. */
+  .shelf{display:grid; gap:clamp(16px,3vw,24px); grid-template-columns:repeat(6,1fr)}
+  .shelf > .game{grid-column:span 2}
+  .shelf > .game:nth-child(n+4){grid-column:span 3}
+  @media (max-width:1180px){
+    .shelf{grid-template-columns:repeat(2,1fr)}
+    .shelf > .game, .shelf > .game:nth-child(n+4){grid-column:auto}
+    .shelf > .game:last-child{grid-column:1 / -1}
+  }
   @media (max-width:620px){ .shelf{grid-template-columns:1fr} }
 
   /* Each card is one block-level link, so the whole tile is the hit area. */
@@ -134,6 +141,21 @@
       #22281a;
   }
 
+  /* Delve — wet brown-slate stone with a glow-moss green accent, the colour
+     that guides you down through the dark in the game itself. Art is a live
+     fight on Depth 4: split shots, a crawler bursting apart, a brute and the
+     lava pools it patrols between. */
+  .dv{
+    --panel:#13110e; --edge:#2e2a22; --accent:#8fdc6a; --dim:#a39a8a;
+    --h2ls:.12em;
+  }
+  .dv .art{
+    background:
+      url("delve/thumbnail.webp") center/cover no-repeat,
+      #0a0908;
+  }
+  .dv h2{text-transform:uppercase}
+
   footer{
     margin-top:clamp(26px,4vw,38px); text-align:center; color:var(--muted);
     font-size:13px; line-height:1.7; border-top:1px solid var(--line); padding-top:20px;
@@ -151,7 +173,7 @@
   <header>
     <h1>S <span>&amp;</span> A Games</h1>
     <p class="tagline">
-      Four browser games, built from scratch. No install, no build step,
+      Five browser games, built from scratch. No install, no build step,
       no dependencies &mdash; pick one and play.
     </p>
   </header>
@@ -214,6 +236,21 @@
           <li>The one game here you cannot play alone</li>
         </ul>
         <p class="cta">Play Tank Duel</p>
+      </div>
+    </a>
+
+    <a class="game dv" href="delve/index.html">
+      <div class="art" aria-hidden="true"></div>
+      <div class="body">
+        <p class="kicker">Cave roguelite platformer</p>
+        <h2>Delve</h2>
+        <p class="pitch">Five cave depths, one lantern and one life.</p>
+        <ul>
+          <li>Winding tunnels and tall shafts, rerolled every run</li>
+          <li>Mouse-aimed shots, seven crystal powerups and run relics</li>
+          <li>A Warden waiting at the bottom of Depth 5</li>
+        </ul>
+        <p class="cta">Play Delve</p>
       </div>
     </a>
   </div>

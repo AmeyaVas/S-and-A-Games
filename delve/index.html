@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delve</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="back" href="../index.html">&larr; All games</a>
+
+  <main id="app">
+    <header id="hud">
+      <div class="hp" title="Health">
+        <span class="lbl">HP</span>
+        <div class="track"><i id="hpFill"></i></div>
+        <b id="hpText">100</b>
+      </div>
+      <h1>Delve</h1>
+      <div class="stats">
+        <span class="stat"><span class="lbl">Depth</span> <b id="depthText">1/5</b></span>
+        <span class="stat"><span class="lbl">Kills</span> <b id="killText">0</b></span>
+        <span class="stat"><span class="lbl">Time</span> <b id="timeText">0:00</b></span>
+      </div>
+    </header>
+
+    <div id="stage">
+      <canvas id="canvas" width="960" height="544"></canvas>
+      <div id="overlay" role="dialog" aria-modal="true"></div>
+    </div>
+
+    <footer id="tray">
+      <div id="powers" aria-label="Active powerups"></div>
+      <div id="relics" aria-label="Relics"></div>
+    </footer>
+  </main>
+
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
