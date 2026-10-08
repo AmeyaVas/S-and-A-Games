@@ -62,7 +62,9 @@ Touch controls appear by themselves on a touch screen. Hold the phone sideways
 | Pause button, top corner | Pause |
 
 Each stick appears wherever that thumb lands, so there is no exact spot to hit.
-The tutorial's signs switch to describing these controls too.
+The tutorial's signs switch to describing these controls too. Active powerups
+sit in the top-left corner of the cave; the relics you hold are listed in the
+pause menu.
 
 1. **Follow the moss.** Glow-moss lines the main route and lights up as you come near, so the way deeper is always the lit one. Side pockets off the tunnel hold crystals and tougher nests.
 2. **Stay alive.** Spikes and lava hurt badly but don't kill outright; only a bottomless pit does. Life sparks drift out of some kills and float toward you. Each beacon heals you to full once — there are no respawn points.
