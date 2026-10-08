@@ -249,3 +249,42 @@ kbd {
   h1 { display: none; }
   #hud { grid-template-columns: 1fr auto; }
 }
+
+/* Phones and tablets. The canvas takes as much of a landscape screen as it
+   can: the back link moves beside it, the title and the tray go, and the
+   stage swallows touches so dragging a stick never scrolls or zooms. */
+#stage { touch-action: none; }
+#rotate { display: none; }
+
+@media (pointer: coarse) {
+  body { padding: 8px; gap: 8px; align-items: flex-start; }
+  .back { position: static; flex: none; }
+  #app { width: auto; flex: 0 1 calc((100vh - 48px) * 960 / 544); min-width: 0; gap: 4px; }
+  #tray { display: none; }
+  #overlay { overflow-y: auto; justify-content: safe center; }
+}
+
+@media (pointer: coarse) and (max-height: 520px) {
+  h1 { display: none; }
+  #hud { grid-template-columns: 1fr auto; }
+  #overlay { gap: 6px; padding: 10px; }
+  #overlay h2 { font-size: 24px; }
+  #overlay p { font-size: 13px; }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #rotate {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--moss);
+    background: var(--ground);
+  }
+}
