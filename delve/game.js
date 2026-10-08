@@ -306,10 +306,20 @@
       return true;
     }
     run.hp -= n; player.inv = 0.9; hurtFlash = 0.35; cam.shake = Math.max(cam.shake, 6);
-    player.vx = (player.x + 6 < fromX ? -1 : 1) * 260; player.vy = Math.min(player.vy, -300);
+    player.vx = (player.x + 6 < fromX ? -1 : 1) * 260; player.vy = Math.min(player.vy, -300); player.cut = true;
     floatText(player.x + 6, player.y - 6, '-' + Math.round(n), '#ff7a5c');
     if(run.hp <= 0) die(why || 'Overwhelmed');
     return true;
+  }
+
+  // Which way out of a lava pool or spike bed is shortest, so the knockback
+  // throws you clear instead of straight back into it. Ties go the way you face.
+  function escape(cx, cy){
+    const reach = s => { for(let d = 1; d < 12; d++){ const x = cx + s * d, t = tileAt(x, cy);
+      if(solidT(tileAt(x, cy - 1))) return 99; // a wall: no way out on this side
+      if(t !== LAVA && t !== SPIKE && (solidT(t) || solidT(tileAt(x, cy + 1)))) return d; } return 99; };
+    const first = Math.sign(player.vx) || player.face;
+    return reach(-first) < reach(first) ? -first : first;
   }
 
   function updatePlayer(dt){
@@ -331,6 +341,8 @@
     if(p.dash > 0){
       p.dash -= dt; p.vx = p.dashDir * DASH_V; p.vy = 0;
       if(Math.random() < 0.6) parts.push({ x: p.x + 6, y: p.y + rand(2, 20), vx: 0, vy: 0, life: 0.3, max: 0.3, size: 3, color: POWERS.blink.color });
+    } else if(p.knock > 0){
+      p.knock -= dt;
     } else {
       const acc = p.ground ? ACC_GROUND : ACC_AIR;
       if(want) p.vx = clamp(p.vx + want * acc * dt, -RUN, RUN);
@@ -385,8 +397,8 @@
     for(let cy = t; cy <= b; cy++) for(let cx = l; cx <= r; cx++){
       const tt = tileAt(cx, cy);
       if(tt === VOID){ die('Fell into the abyss'); return; }
-      if(tt === LAVA){ if(hurt(34, p.x + 6, 'Burned in lava')){ p.vy = -620; p.vx *= 0.3; burst(p.x + 6, p.y + p.h, '#ff8a3a', 12, 0.6); } }
-      if(tt === SPIKE && p.y + p.h > cy * T + 7){ if(hurt(22, p.x + 6, 'Impaled on spikes')) p.vy = -430; }
+      if(tt === LAVA){ if(hurt(34, p.x + 6, 'Burned in lava')){ p.vy = -620; p.cut = true; p.vx = escape(cx, cy) * 240; p.knock = 0.35; burst(p.x + 6, p.y + p.h, '#ff8a3a', 12, 0.6); } }
+      if(tt === SPIKE && p.y + p.h > cy * T + 7){ if(hurt(22, p.x + 6, 'Impaled on spikes')){ p.vy = -430; p.cut = true; p.vx = escape(cx, cy) * 200; p.knock = 0.3; } }
       if(tt === EXIT && !lvl.sealed){ depthCleared(); return; }
     }
     if(p.y > lvl.H * T + 40){ die('Fell into the abyss'); return; }
