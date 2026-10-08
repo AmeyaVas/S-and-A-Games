@@ -2,7 +2,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2]), port = Number(process.argv[3] || 4173);
 const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css',
   '.md':'text/plain; charset=utf-8', '.json':'application/json',
-  '.webp':'image/webp', '.png':'image/png', '.jpg':'image/jpeg', '.gif':'image/gif',
+  '.webmanifest':'application/manifest+json', '.webp':'image/webp', '.png':'image/png', '.jpg':'image/jpeg', '.gif':'image/gif',
   '.svg':'image/svg+xml', '.ico':'image/x-icon'};
 http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0].split('#')[0]);
