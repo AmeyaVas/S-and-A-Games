@@ -351,7 +351,7 @@
     // Letting go early cuts the rise, but never below a short minimum hop.
     p.jumpT = (p.jumpT || 0) + dt;
     if(!jumpHeld && p.jumpT > 0.08 && p.vy < -120 && !p.cut && !p.padLaunch){ p.vy *= 0.5; p.cut = true; }
-    if(keys.has('down') && pressed.has('down')) p.drop = 0.25;
+    if(pressed.has('down')) p.drop = 0.25;
     p.drop = Math.max(0, p.drop - dt);
 
     if(p.dash <= 0){
