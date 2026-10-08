@@ -90,7 +90,7 @@
   const mouse = { x: VW / 2, y: VH / 2, down: false };
   const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
     KeyW: 'jump', ArrowUp: 'jump', Space: 'jump', KeyS: 'down', ArrowDown: 'down',
-    ShiftLeft: 'dash', ShiftRight: 'dash' };
+    ShiftLeft: 'dash', ShiftRight: 'dash', KeyF: 'fire' };
   addEventListener('keydown', e => {
     const k = KEYMAP[e.code];
     if(k){ if(!keys.has(k)) pressed.add(k); keys.add(k); if(mode === 'play') e.preventDefault(); }
@@ -414,7 +414,7 @@
 
     // Firing.
     p.fireCd -= dt;
-    if(mouse.down && p.fireCd <= 0 && p.dash <= 0){
+    if((mouse.down || keys.has('fire')) && p.fireCd <= 0 && p.dash <= 0){
       const rate = (1 + 0.2 * (run.relics.hands || 0)) * (timed('overclock') ? 2 : 1);
       p.fireCd = FIRE_GAP / rate;
       const ox = p.x + 6, oy = p.y + 9, a = Math.atan2(aimY - oy, aimX - ox);
@@ -1127,7 +1127,7 @@
     mode = m; mouse.down = false; pressed.clear();
     const records = `<p>Deepest <b>${save.deepest || '—'}</b> &nbsp; Best run <b>${save.bestTime ? fmtTime(save.bestTime) : '—'}</b> &nbsp; Total kills <b>${save.kills}</b></p>`;
     const keysHelp = `<p class="keys"><kbd>A</kbd><kbd>D</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump (hold for higher) &nbsp; <kbd>S</kbd> drop through planks<br>
-      mouse aims, click or hold to fire &nbsp; <kbd>Shift</kbd> blink &nbsp; <kbd>Esc</kbd> pause</p>`;
+      mouse aims, click or hold (or <kbd>F</kbd>) to fire &nbsp; <kbd>Shift</kbd> blink &nbsp; <kbd>Esc</kbd> pause</p>`;
     let html = '';
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
     if(m === 'title') html = `<h2>Delve</h2>

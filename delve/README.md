@@ -27,7 +27,7 @@ Your records (deepest depth, best full run, total kills) are kept in `localStora
 | <kbd>W</kbd>, <kbd>&uarr;</kbd> or <kbd>Space</kbd> | Jump — hold for higher |
 | <kbd>S</kbd> or <kbd>&darr;</kbd> | Drop through a plank |
 | Mouse | Aim |
-| Click / hold | Fire |
+| Click / hold, or <kbd>F</kbd> | Fire |
 | <kbd>Shift</kbd> | Blink dash (while you have charges) |
 | <kbd>Esc</kbd> | Pause |
 
