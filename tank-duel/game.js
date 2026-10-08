@@ -277,6 +277,28 @@
 
   document.getElementById('again').addEventListener('click', reset);
 
+  // ---- touch pad -------------------------------------------------------
+
+  /* Each aim button holds its arrow key for as long as the finger stays on
+     it, so the numbers sweep just as they do from the keyboard. Pointer
+     capture keeps the hold even if the finger slides off the button. */
+  for (const btn of document.querySelectorAll('#pad [data-key]')) {
+    const key = btn.dataset.key;
+    const release = () => { held.delete(key); btn.classList.remove('down'); };
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (settingsOpen()) return;
+      held.add(key); btn.classList.add('down');
+      try { btn.setPointerCapture(e.pointerId); } catch (_) { /* no capture */ }
+    });
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointercancel', release);
+    btn.addEventListener('lostpointercapture', release);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  document.getElementById('padFire').addEventListener('click', () => { if (!settingsOpen()) fire(); });
+  document.getElementById('padNew').addEventListener('click', reset);
+
   // ---- settings --------------------------------------------------------
 
   const panel = document.getElementById('settings');
