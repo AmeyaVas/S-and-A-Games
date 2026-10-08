@@ -49,8 +49,8 @@ Jumps forgive a late press off a ledge and an early press before landing.
 
 1. **Follow the moss.** Glow-moss lines the main route and lights up as you come near, so the way deeper is always the lit one. Side pockets off the tunnel hold crystals and tougher nests.
 2. **Stay alive.** Spikes and lava hurt badly but don't kill outright; only a bottomless pit does. Life sparks drift out of some kills and float toward you. Each beacon heals you to full once — there are no respawn points.
-3. **Drop into the descent hole** at the end of a depth, then pick one of three relics. Relics last for the rest of the run.
-4. **Break the Warden.** Depth 5 ends in its hollow, and the way out stays sealed until it falls.
+3. **Walk through the doorway** at the end of a depth, then pick one of three relics. Relics last for the rest of the run.
+4. **Break the Warden.** Depth 5 ends in its hollow, and the doorway out stays barred until it falls.
 
 Dying ends the run. The next one starts again at Depth 1 with fresh rolls and no relics.
 

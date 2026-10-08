@@ -177,6 +177,9 @@
     }
     for(let y = 0; y < H; y++) for(let x = 0; x < W; x++)
       if(tiles[y * W + x] === LAVA && (y === 0 || tiles[(y - 1) * W + x] !== LAVA)) L.lavaTops.push([x, y]);
+    // The doorway out, as a pixel box around its cells.
+    const ex = L.exitCells.map(c => c[0]), ey = L.exitCells.map(c => c[1]);
+    L.door = ex.length ? { x0: Math.min(...ex) * T, x1: (Math.max(...ex) + 1) * T, y0: Math.min(...ey) * T, y1: (Math.max(...ey) + 1) * T } : null;
     // Moss needs something to grow on, judged after the rolls: a floor of rock,
     // pad or plank (side 0), else rock to the left (-1) or right (1). Moss over
     // a pit, lava or open air is dropped rather than drawn floating.
@@ -563,7 +566,7 @@
       drops.push({ kind: 'crystal', type: Math.random() < 0.12 ? pick(['splitter', 'ricochet']) : pick(ROLLABLE), x: cx, y: cy - 6, t: 0, life: 25 });
     if(f.type === 'W'){
       lvl.sealed = false; prerender();
-      showToast('The Warden falls — the way down is open');
+      showToast('The Warden falls — the door is open');
       for(const e of foes) if(e.type === 'B' && e.summoned) killFoe(e);
     }
   }
@@ -875,10 +878,24 @@
         g.fillStyle = '#123a30'; g.fillRect(px + 4, py + 8, 8, 4);
       } else if(t === VOID){
         g.fillStyle = '#000'; g.fillRect(px, py, T, T);
-      } else if(t === EXIT && lvl.sealed){
-        g.fillStyle = '#2a1a14'; g.fillRect(px, py, T, T);
-        g.fillStyle = '#8a3a22'; g.fillRect(px + 2, py, 3, T); g.fillRect(px + 10, py, 3, T);
       }
+    }
+    // The doorway: a frame of carved blocks round the opening, barred while sealed.
+    const d = lvl.door;
+    if(d){
+      if(lvl.sealed){
+        g.fillStyle = '#140d0a'; g.fillRect(d.x0, d.y0, d.x1 - d.x0, d.y1 - d.y0);
+        g.fillStyle = '#5a3424';
+        for(let x = d.x0 + 3; x < d.x1 - 2; x += 7) g.fillRect(x, d.y0, 3, d.y1 - d.y0);
+        g.fillRect(d.x0, d.y0 + 14, d.x1 - d.x0, 3); g.fillRect(d.x0, d.y1 - 16, d.x1 - d.x0, 3);
+      }
+      const block = (x, y, w, h, k) => { g.fillStyle = rgb([118, 108, 94], k); g.fillRect(x, y, w, h);
+        g.fillStyle = rgb([118, 108, 94], k * 1.3); g.fillRect(x, y, w, 2); };
+      for(let y = d.y0, i = 0; y < d.y1; y += 8, i++){
+        block(d.x0 - 7, y, 6, 7, 0.85 + 0.1 * (i % 2)); block(d.x1 + 1, y, 6, 7, 0.9 - 0.1 * (i % 2)); }
+      for(let x = d.x0 - 7, i = 0; x < d.x1 + 7; x += 8, i++) block(x, d.y0 - 9, 7, 8, 0.9 + 0.08 * (i % 2));
+      g.fillStyle = '#8fdc6a'; g.fillRect((d.x0 + d.x1) / 2 - 3, d.y0 - 8, 6, 6);
+      g.fillStyle = rgb([118, 108, 94], 1.2); g.fillRect(d.x0 - 7, d.y1, d.x1 - d.x0 + 14, 3);
     }
     lvl.canvas = c;
   }
@@ -925,8 +942,9 @@
       }
     }
     for(const [x, y] of lvl.lavaTops) if(inView(x * T, y * T, 60)) lights.push([x * T + 8, y * T + 4, 70, 0.7, '255,120,40']);
-    if(!lvl.sealed){ const e = lvl.exitCells; if(e.length){ const [ex, ey] = e[0];
-      lights.push([ex * T + 32, ey * T, 120 + Math.sin(time * 2) * 10, 0.9, '90,240,200']); } }
+    if(lvl.door){ const d = lvl.door, cx = (d.x0 + d.x1) / 2, cy = (d.y0 + d.y1) / 2;
+      if(lvl.sealed) lights.push([cx, cy, 50, 0.5, '240,110,60']);
+      else lights.push([cx, cy, 120 + Math.sin(time * 2) * 10, 0.9, '90,240,200']); }
 
     // Glow-moss: tiny squares on the floor of the route, brighter the closer you have come.
     for(const m of lvl.moss){
