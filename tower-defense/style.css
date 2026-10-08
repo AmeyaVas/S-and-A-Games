@@ -329,3 +329,24 @@ body { touch-action: manipulation; }
   .tower-btn { padding: 6px 8px; }
   #overlay-message { font-size: 24px; }
 }
+
+/* A nudge, not a wall: on a touch screen held upright the game still plays,
+   but the board is small, so a banner above it suggests turning sideways. */
+#landscape-tip { display: none; }
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #landscape-tip {
+    display: block;
+    margin: 0;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #1c1712;
+    background: #d4af37;
+    border: 2px solid #1c1712;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px #f0d77a;
+  }
+}
