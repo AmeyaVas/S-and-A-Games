@@ -525,7 +525,9 @@
     const hit = moveX(f, f.vx * dt);
     const landed = moveY(f, f.vy * dt, false);
     f.ground = landed > 0; if(landed) f.vy = 0;
-    if(hit && f.ground) f.dir = -f.dir;
+    // Stop dead on a wall bump: velocity eases toward the new direction, so
+    // without this it still points into the wall next step and flips back.
+    if(hit && f.ground){ f.dir = -f.dir; f.vx = 0; }
     if(edgeTurn && f.ground){
       const ahead = f.dir > 0 ? f.x + f.w + 2 : f.x - 2;
       const below = tileAt(Math.floor(ahead / T), Math.floor((f.y + f.h + 2) / T));
