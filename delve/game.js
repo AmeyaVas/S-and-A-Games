@@ -99,13 +99,94 @@
     if(mode === 'relic' && /^Digit[123]$/.test(e.code)) chooseRelic(+e.code[5] - 1);
   });
   addEventListener('keyup', e => { const k = KEYMAP[e.code]; if(k) keys.delete(k); });
-  addEventListener('blur', () => { keys.clear(); mouse.down = false; if(mode === 'play') setMode('pause'); });
+  addEventListener('blur', () => { keys.clear(); touchKeys.clear(); sticks.left = sticks.right = null; mouse.down = false; if(mode === 'play') setMode('pause'); });
   const toCanvas = e => { const r = canvas.getBoundingClientRect();
     mouse.x = (e.clientX - r.left) * VW / r.width; mouse.y = (e.clientY - r.top) * VH / r.height; };
   addEventListener('mousemove', toCanvas);
   canvas.addEventListener('mousedown', e => { toCanvas(e); if(e.button === 0) mouse.down = true; });
   addEventListener('mouseup', e => { if(e.button === 0) mouse.down = false; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  // ---------------------------------------------------------------- touch
+  // Twin sticks for phones and tablets. The left stick appears where the left
+  // thumb lands: sideways runs, up jumps (held for higher), down drops through
+  // planks. The right stick aims and fires while held. Blink and pause are
+  // buttons. Everything is fed into the same keys and mouse the desktop uses.
+  let touchMode = matchMedia('(pointer: coarse)').matches;
+  const STICK_R = 54, BLINK_BTN = { x: VW - 70, y: VH - 250, r: 38 }, PAUSE_BTN = { x: VW - 36, y: 36, r: 24 };
+  const stickHome = { left: { x: 130, y: VH - 120 }, right: { x: VW - 150, y: VH - 120 } };
+  const sticks = { left: null, right: null }, touchKeys = new Set();
+  let blinkTouch = null;
+  const touchPoint = t => { const r = canvas.getBoundingClientRect();
+    return { x: (t.clientX - r.left) * VW / r.width, y: (t.clientY - r.top) * VH / r.height }; };
+  const near = (p, b) => Math.hypot(p.x - b.x, p.y - b.y) < b.r + 10;
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault(); touchMode = true;
+    for(const t of e.changedTouches){
+      const p = touchPoint(t);
+      if(near(p, PAUSE_BTN)){ if(mode === 'play') setMode('pause'); continue; }
+      if(near(p, BLINK_BTN)){ blinkTouch = t.identifier; setTouchKey('dash', true); continue; }
+      const side = p.x < VW * 0.45 ? 'left' : 'right';
+      if(!sticks[side]) sticks[side] = { id: t.identifier, ox: p.x, oy: p.y, x: p.x, y: p.y };
+    }
+  }, { passive: false });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for(const t of e.changedTouches) for(const side of ['left', 'right']){
+      const s = sticks[side]; if(s && s.id === t.identifier){ const p = touchPoint(t); s.x = p.x; s.y = p.y; } }
+  }, { passive: false });
+  const endTouch = e => {
+    for(const t of e.changedTouches){
+      if(t.identifier === blinkTouch){ blinkTouch = null; setTouchKey('dash', false); }
+      for(const side of ['left', 'right']) if(sticks[side] && sticks[side].id === t.identifier) sticks[side] = null;
+    }
+    if(!sticks.right) mouse.down = false;
+  };
+  canvas.addEventListener('touchend', endTouch);
+  canvas.addEventListener('touchcancel', endTouch);
+  function setTouchKey(k, on){
+    if(on && !touchKeys.has(k)){ touchKeys.add(k); if(!keys.has(k)) pressed.add(k); keys.add(k); }
+    if(!on && touchKeys.has(k)){ touchKeys.delete(k); keys.delete(k); }
+  }
+  const stickVec = s => { const dx = s.x - s.ox, dy = s.y - s.oy, d = Math.hypot(dx, dy), k = d > STICK_R ? STICK_R / d : 1;
+    return { dx: dx * k, dy: dy * k, d: Math.min(d, STICK_R) }; };
+  // Called once per physics step, before the player moves.
+  function applyTouch(){
+    if(!touchMode) return;
+    const L = sticks.left && stickVec(sticks.left);
+    setTouchKey('left', !!L && L.dx < -14);
+    setTouchKey('right', !!L && L.dx > 14);
+    setTouchKey('jump', !!L && L.dy < -30);
+    setTouchKey('down', !!L && L.dy > 30 && Math.abs(L.dx) < L.dy);
+    const R = sticks.right && stickVec(sticks.right);
+    if(R && R.d > 12){
+      const px = player.x + 6 - cam.x, py = player.y + 9 - cam.y, a = Math.atan2(R.dy, R.dx);
+      mouse.x = px + Math.cos(a) * 220; mouse.y = py + Math.sin(a) * 220; mouse.down = true;
+    } else mouse.down = false;
+  }
+  function drawTouch(){
+    ctx.save();
+    const ring = (x, y, r, a) => { ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke(); };
+    ctx.lineWidth = 2;
+    for(const side of ['left', 'right']){
+      const s = sticks[side], home = stickHome[side], ox = s ? s.ox : home.x, oy = s ? s.oy : home.y;
+      const v = s ? stickVec(s) : { dx: 0, dy: 0 };
+      ctx.strokeStyle = side === 'left' ? '#8fdc6a' : '#5fe3f0';
+      ring(ox, oy, STICK_R, s ? 0.55 : 0.25);
+      ctx.fillStyle = ctx.strokeStyle; ctx.globalAlpha = s ? 0.5 : 0.2;
+      ctx.beginPath(); ctx.arc(ox + v.dx, oy + v.dy, 22, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = s ? 0.7 : 0.35; ctx.font = 'bold 11px ui-sans-serif, system-ui, sans-serif'; ctx.textAlign = 'center';
+      if(side === 'left'){ ctx.fillText('jump', ox, oy - STICK_R - 8); ctx.fillText('drop', ox, oy + STICK_R + 16); }
+      else ctx.fillText('aim + fire', ox, oy + STICK_R + 16);
+    }
+    const blink = player && player.blink > 0;
+    ctx.strokeStyle = '#ff8fd0'; ring(BLINK_BTN.x, BLINK_BTN.y, BLINK_BTN.r, blink ? (blinkTouch !== null ? 0.9 : 0.6) : 0.15);
+    ctx.fillStyle = '#ff8fd0'; ctx.globalAlpha = blink ? 0.8 : 0.2; ctx.font = 'bold 13px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(blink ? 'Blink ' + player.blink : 'Blink', BLINK_BTN.x, BLINK_BTN.y);
+    ctx.strokeStyle = '#e6e1d6'; ring(PAUSE_BTN.x, PAUSE_BTN.y, PAUSE_BTN.r, 0.4);
+    ctx.fillStyle = '#e6e1d6'; ctx.globalAlpha = 0.6; ctx.fillRect(PAUSE_BTN.x - 7, PAUSE_BTN.y - 8, 5, 16); ctx.fillRect(PAUSE_BTN.x + 2, PAUSE_BTN.y - 8, 5, 16);
+    ctx.restore();
+  }
 
   // ---------------------------------------------------------------- state
   let mode = 'title';
@@ -807,6 +888,7 @@
   // ---------------------------------------------------------------- loop
   function step(dt){
     if(mode !== 'play') return;
+    applyTouch();
     run.time += dt;
     updateLifts(dt);
     updatePlayer(dt);
@@ -1070,11 +1152,12 @@
     ctx.globalAlpha = 1;
     for(const s of lvl.signs) if(inView(s.x * T, s.y * T, 260)) drawSign(s);
     ctx.restore();
-    if(mode === 'play'){
+    if(mode === 'play' && (!touchMode || sticks.right)){
       ctx.strokeStyle = 'rgba(95,227,240,0.85)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 7, 0, 6.283); ctx.stroke();
       ctx.fillStyle = '#5fe3f0'; ctx.fillRect(mouse.x - 1, mouse.y - 1, 2, 2);
     }
+    if(mode === 'play' && touchMode) drawTouch();
     const w = foes.find(f => f.type === 'W' && f.state !== 'dormant');
     if(w){
       ctx.fillStyle = '#000a'; ctx.fillRect(VW / 2 - 202, 14, 404, 14);
@@ -1100,7 +1183,7 @@
   // Tutorial signs are painted on the cave wall, OvO-style, and stay readable in
   // the dark. Text in [brackets] is drawn as a key cap.
   function drawSign(s){
-    const lines = s.text.split('\n'), LH = 18, cx = s.x * T + T / 2;
+    const lines = (touchMode && s.touch || s.text).split('\n'), LH = 18, cx = s.x * T + T / 2;
     ctx.font = 'bold 13px ui-sans-serif, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     const parts = lines.map(l => l.split(/(\[[^\]]+\])/).filter(Boolean));
     const width = seg => seg.startsWith('[') ? ctx.measureText(seg.slice(1, -1)).width + 12 : ctx.measureText(seg).width;
@@ -1252,7 +1335,8 @@
   function setMode(m){
     mode = m; mouse.down = false; pressed.clear();
     const records = `<p>Deepest <b>${save.deepest || '—'}</b> &nbsp; Best run <b>${save.bestTime ? fmtTime(save.bestTime) : '—'}</b> &nbsp; Total kills <b>${save.kills}</b></p>`;
-    const keysHelp = `<p class="keys"><kbd>A</kbd><kbd>D</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump (hold for higher) &nbsp; <kbd>S</kbd> drop through planks<br>
+    const keysHelp = touchMode ? `<p class="keys">Left thumb: drag to run, push up to jump (hold for higher), pull down to drop through planks.<br>
+      Right thumb: drag to aim, and it fires while you hold. Blink and pause are buttons.</p>` : `<p class="keys"><kbd>A</kbd><kbd>D</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump (hold for higher) &nbsp; <kbd>S</kbd> drop through planks<br>
       mouse aims, click or hold (or <kbd>F</kbd>) to fire &nbsp; <kbd>Shift</kbd> blink &nbsp; <kbd>Esc</kbd> pause</p>`;
     let html = '';
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
