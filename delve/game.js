@@ -987,7 +987,8 @@
     for(const s of bullets){
       ctx.strokeStyle = '#5fe3f0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 0.012, s.y - s.vy * 0.012); ctx.stroke();
       ctx.fillStyle = '#e8feff'; ctx.beginPath(); ctx.arc(s.x, s.y, 2.2, 0, 6.283); ctx.fill();
-      lights.push([s.x, s.y, 40, 0.6, '95,227,240']);
+      // A small glint only: shots must not work as a torch for scouting the dark.
+      lights.push([s.x, s.y, 14, 0.3, '95,227,240']);
     }
     for(const s of hostile){
       ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill();
