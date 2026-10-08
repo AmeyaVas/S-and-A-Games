@@ -297,3 +297,35 @@ body {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Phones and tablets. A tap is already a click, so only the layout changes:
+   the board scales to fit, and double-tap zoom is turned off so quick taps
+   on the board and buttons are never swallowed. */
+body { touch-action: manipulation; }
+#canvas { max-width: 100%; height: auto; }
+
+/* Narrower than the side-by-side layout: board on top, sidebar below. */
+@media (max-width: 1060px) {
+  body { align-items: flex-start; }
+  #app { flex-direction: column; width: 100%; max-width: 762px; padding: 8px; gap: 10px; }
+  #canvas { width: 100%; }
+  #sidebar { width: 100%; }
+  #tower-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* A phone on its side: board as tall as the screen, sidebar beside it and
+   scrolling on its own, back link moved to the sidebar's top corner. */
+@media (orientation: landscape) and (max-height: 560px) {
+  body { padding: 4px; }
+  .back { top: 8px; left: auto; right: 8px; padding: 6px 9px; }
+  #app { flex-direction: row; max-width: none; padding: 0; gap: 6px; }
+  #game-area { flex: none; }
+  #canvas { width: auto; height: calc(100vh - 8px); }
+  #sidebar { width: auto; flex: 1; min-width: 0; max-height: calc(100vh - 8px); overflow-y: auto; padding: 38px 10px 10px; }
+  #sidebar h1, #hint { display: none; }
+  #sidebar h2 { margin: 10px 0 6px; }
+  .stat-row { padding: 2px 0; font-size: 14px; }
+  #start-wave-btn { margin: 6px 0 2px; padding: 8px; font-size: 15px; }
+  .tower-btn { padding: 6px 8px; }
+  #overlay-message { font-size: 24px; }
+}
