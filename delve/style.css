@@ -296,3 +296,18 @@ kbd {
 :fullscreen body { padding: 4px; }
 :fullscreen .back { display: none; }
 :fullscreen #app { flex: 0 1 calc((100vh - 36px) * 960 / 544); }
+
+/* Difficulty: one segmented row, the chosen one lit. */
+.diffs { display: flex; flex-wrap: wrap; justify-content: center; }
+#overlay .diff {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-color: var(--edge);
+  border-radius: 0;
+  margin-left: -1px;
+  background: var(--plate);
+  color: var(--muted);
+}
+#overlay .diff:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
+#overlay .diff:last-child { border-radius: 0 3px 3px 0; }
+#overlay .diff[aria-checked="true"] { position: relative; border-color: var(--moss); background: #1b2414; color: var(--moss); }

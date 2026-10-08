@@ -15,6 +15,17 @@
   const SHOT_V = 760, SHOT_LIFE = 0.9, SHOT_DMG = 10, FIRE_GAP = 0.17;
   const BASE_HP = 100, LANTERN = 170;
 
+  // Difficulty scales your health, the damage you take (from everything:
+  // enemies, acid, spikes, lava) and how much punishment enemies soak up.
+  // The tutorial always plays on Medium.
+  const DIFFS = {
+    noob:   { name: 'Noob',   hp: 200, hurt: 0.4,  foeHp: 0.6  },
+    easy:   { name: 'Easy',   hp: 140, hurt: 0.7,  foeHp: 0.8  },
+    medium: { name: 'Medium', hp: 100, hurt: 1,    foeHp: 1    },
+    hard:   { name: 'Hard',   hp: 100, hurt: 1.35, foeHp: 1.25 },
+    expert: { name: 'Expert', hp: 75,  hurt: 1.7,  foeHp: 1.5  },
+  };
+
   const AIR = 0, ROCK = 1, PLANK = 2, SPIKE = 3, LAVA = 4, PAD = 5, VOID = 6, EXIT = 7;
 
   const POWERS = {
@@ -82,8 +93,11 @@
 
   // ---------------------------------------------------------------- save
   const SAVE_KEY = 'delve.save.v1';
-  let save = { deepest: 0, bestTime: 0, kills: 0 };
+  let save = { deepest: 0, bestTime: 0, kills: 0, diff: 'medium', best: {} };
   try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
+  // Best times are kept per difficulty; runs from before it existed were Medium.
+  if(save.bestTime && !save.best.medium) save.best.medium = save.bestTime;
+  if(!DIFFS[save.diff]) save.diff = 'medium';
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
 
   // ---------------------------------------------------------------- input
@@ -298,7 +312,8 @@
   function newRun(seed){
     const forced = new URLSearchParams(location.search).get('seed');
     seed = seed ?? (forced !== null ? (+forced >>> 0) : (Math.random() * 2 ** 32) >>> 0);
-    run = { seed, depth: 0, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
+    const hp = DIFFS[save.diff].hp;
+    run = { seed, diff: save.diff, depth: 0, hp, maxHp: hp, relics: {}, perm: {}, kills: 0, time: 0,
       rng: mulberry(seed ^ 0x51ED) };
     enterDepth(0);
     setMode('play');
@@ -307,7 +322,7 @@
   // The tutorial is a run of its own: nothing it does reaches the records,
   // and dying there puts you back at the last sign you passed.
   function startTutorial(){
-    run = { seed: 1, depth: TUTORIAL, tutorial: true, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
+    run = { seed: 1, diff: 'medium', depth: TUTORIAL, tutorial: true, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
       rng: mulberry(1), checkpoint: -1, respawn: null };
     player = null;
     enterDepth(TUTORIAL);
@@ -340,7 +355,8 @@
     if(run.tutorial){ finishTutorial(); return; }
     save.kills += run.kills - (run.savedKills || 0); run.savedKills = run.kills; persist();
     if(run.depth + 1 >= DEPTHS){
-      if(!save.bestTime || run.time < save.bestTime) { save.bestTime = run.time; run.newBest = true; }
+      const best = save.best[run.diff];
+      if(!best || run.time < best){ save.best[run.diff] = run.time; run.newBest = true; }
       persist(); setMode('won'); return;
     }
     // Relics stack up to RELIC_CAP copies; a maxed one is never offered again.
@@ -381,7 +397,8 @@
   // ---------------------------------------------------------------- foes
   function spawnFoe(type, cx, cy, rows){
     // Enemies toughen with depth; the Warden is tuned as-is and does not.
-    const d = FOES[type], depth = run && type !== 'W' ? run.depth : 0, scale = 1 + 0.15 * depth;
+    const d = FOES[type], depth = run && type !== 'W' ? run.depth : 0;
+    const scale = (1 + 0.15 * depth) * (run ? DIFFS[run.diff].foeHp : 1);
     const f = { type, w: d.w, h: d.h, hp: d.hp * scale, maxHp: d.hp * scale, dmg: d.dmg * (1 + 0.1 * depth),
       x: cx * T + T / 2 - d.w / 2, y: (cy + 1) * T - d.h, vx: 0, vy: 0, dir: Math.random() < 0.5 ? -1 : 1,
       flash: 0, t: rand(0, 3), state: 'idle', cd: rand(0.5, 2), ground: false, anim: rand(0, 6) };
@@ -443,6 +460,7 @@
       floatText(player.x + 6, player.y - 6, player.aegis ? 'Aegis -1' : 'Aegis broke', POWERS.aegis.color);
       return true;
     }
+    n *= DIFFS[run.diff].hurt;
     run.hp -= n; player.inv = 0.9; hurtFlash = 0.35; cam.shake = Math.max(cam.shake, 6);
     player.vx = (player.x + 6 < fromX ? -1 : 1) * 260; player.vy = Math.min(player.vy, -300); player.cut = true;
     floatText(player.x + 6, player.y - 6, '-' + Math.round(n), '#ff7a5c');
@@ -1334,7 +1352,10 @@
   // ---------------------------------------------------------------- overlays
   function setMode(m){
     mode = m; mouse.down = false; pressed.clear();
-    const records = `<p>Deepest <b>${save.deepest || '—'}</b> &nbsp; Best run <b>${save.bestTime ? fmtTime(save.bestTime) : '—'}</b> &nbsp; Total kills <b>${save.kills}</b></p>`;
+    const best = save.best[save.diff];
+    const records = `<p>Deepest <b>${save.deepest || '—'}</b> &nbsp; Best <span class="bestName">${DIFFS[save.diff].name}</span> run <b class="best">${best ? fmtTime(best) : '—'}</b> &nbsp; Total kills <b>${save.kills}</b></p>`;
+    const diffs = `<div class="diffs" role="radiogroup" aria-label="Difficulty">${Object.keys(DIFFS).map(k =>
+      `<button class="diff" role="radio" data-diff="${k}" aria-checked="${k === save.diff}">${DIFFS[k].name}</button>`).join('')}</div>`;
     const keysHelp = touchMode ? `<p class="keys">Left thumb: drag to run, push up to jump (hold for higher), pull down to drop through planks.<br>
       Right thumb: drag to aim, and it fires while you hold. Blink and pause are buttons.</p>` : `<p class="keys"><kbd>A</kbd><kbd>D</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump (hold for higher) &nbsp; <kbd>S</kbd> drop through planks<br>
       mouse aims, click or hold (or <kbd>F</kbd>) to fire &nbsp; <kbd>Shift</kbd> blink &nbsp; <kbd>Esc</kbd> pause</p>`;
@@ -1342,21 +1363,21 @@
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
     if(m === 'title') html = `<h2>Delve</h2>
       <p>Five cave depths, one life. Follow the glow-moss down, light beacons to heal, take a relic at the bottom of every depth, and break the Warden at the end.</p>
-      ${keysHelp}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
+      ${keysHelp}${diffs}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
       <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span>${run.relics[k] ? `<span class="owned">You have ×${run.relics[k]} of ${RELIC_CAP}</span>` : ''}</button>`).join('')}</div>`;
     else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button></div>`;
-    else if(m === 'pause') html = `<h2>Paused</h2><p>Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
+    else if(m === 'pause') html = `<h2>Paused</h2><p>${DIFFS[run.diff].name} &nbsp; Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button></div>`;
     else if(m === 'tutorialDone') html = `<h2 class="good">Ready</h2><p>That's everything. A real run is five depths and one life: no checkpoints, fresh rolls every time, and a relic at the bottom of each depth.</p>
-      <div class="row"><button data-act="start">Begin descent</button></div>`;
+      ${diffs}<div class="row"><button data-act="start">Begin descent</button></div>`;
     else if(m === 'dead') html = `<h2 class="bad">Run over</h2><p>${run.cause || 'The cave keeps you'} on depth <b>${run.depth + 1}</b> after <b>${fmtTime(run.time)}</b>, with <b>${run.kills}</b> kills.</p>
-      <p>The next run starts again at Depth 1 with fresh rolls and no relics.</p>${records}<div class="row"><button data-act="start">Delve again</button></div>`;
-    else if(m === 'won') html = `<h2 class="good">The Warden falls</h2><p>All five depths in <b>${fmtTime(run.time)}</b> with <b>${run.kills}</b> kills.${run.newBest ? ' A new best run.' : ''}</p>
-      ${records}<div class="row"><button data-act="start">Delve again</button></div>`;
+      <p>The next run starts again at Depth 1 with fresh rolls and no relics.</p>${diffs}${records}<div class="row"><button data-act="start">Delve again</button></div>`;
+    else if(m === 'won') html = `<h2 class="good">The Warden falls</h2><p>All five depths in <b>${fmtTime(run.time)}</b> with <b>${run.kills}</b> kills on ${DIFFS[run.diff].name}.${run.newBest ? ' A new best run.' : ''}</p>
+      ${diffs}${records}<div class="row"><button data-act="start">Delve again</button></div>`;
     overlay.innerHTML = html; overlay.hidden = false;
-    const first = overlay.querySelector('button'); if(first) first.focus();
+    const first = overlay.querySelector('button:not(.diff)'); if(first) first.focus();
   }
   // On a touch screen, starting or resuming play goes fullscreen and, where the
   // browser allows, locks to landscape. It needs the tap itself to be allowed,
@@ -1374,6 +1395,13 @@
   }
   overlay.addEventListener('click', e => {
     const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.diff){
+      save.diff = b.dataset.diff; persist();
+      for(const o of overlay.querySelectorAll('.diff')) o.setAttribute('aria-checked', o === b);
+      const best = save.best[save.diff], rec = overlay.querySelector('.best');
+      if(rec){ rec.textContent = best ? fmtTime(best) : '—'; overlay.querySelector('.bestName').textContent = DIFFS[save.diff].name; }
+      return;
+    }
     if(b.dataset.act || b.dataset.relic) goFullscreen();
     if(b.dataset.relic) chooseRelic(+b.dataset.relic);
     const a = b.dataset.act;
@@ -1396,7 +1424,7 @@
 
   // Test hooks for the headless checks; the game never reads them.
   window.__delve = {
-    get mode(){ return mode; }, get run(){ return run; }, get player(){ return player; }, get lvl(){ return lvl; },
+    get mode(){ return mode; }, save, DIFFS, get run(){ return run; }, get player(){ return player; }, get lvl(){ return lvl; },
     get foes(){ return foes; }, get bullets(){ return bullets; }, get drops(){ return drops; }, get frags(){ return frags; }, get cam(){ return cam; },
     newRun, startTutorial, chooseRelic, grant, spawnFoe, killFoe, hurt, depthCleared, step,
     goto(i){ enterDepth(i); setMode('play'); },
