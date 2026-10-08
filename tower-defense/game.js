@@ -627,7 +627,7 @@
   function renderUpgradePanel() {
     const tower = state.selectedTower;
     if (!tower) {
-      const html = '<p class="muted">Click a placed tower to upgrade it.</p>';
+      const html = '<p class="muted">Tap or click a placed tower to upgrade it.</p>';
       if (renderedPanelHtml === html) return;
       upgradePanelEl.innerHTML = html;
       renderedPanelHtml = html;
@@ -686,11 +686,13 @@
   }
 
   function canvasCell(evt) {
+    // Measure from inside the board's frame and against its drawn size, so a
+    // tap lands on the right cell however far the board is scaled down.
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (evt.clientX - rect.left) * scaleX;
-    const y = (evt.clientY - rect.top) * scaleY;
+    const scaleX = canvas.width / canvas.clientWidth;
+    const scaleY = canvas.height / canvas.clientHeight;
+    const x = (evt.clientX - rect.left - canvas.clientLeft) * scaleX;
+    const y = (evt.clientY - rect.top - canvas.clientTop) * scaleY;
     const col = Math.floor(x / CELL);
     const row = Math.floor(y / CELL);
     return { col, row, x, y };
