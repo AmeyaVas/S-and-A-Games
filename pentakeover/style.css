@@ -901,3 +901,35 @@ select:disabled { opacity: 0.4; }
   .ovbtns { flex-direction: column-reverse; }
   .ovbtns button { width: 100%; }
 }
+
+/* A phone held sideways: too narrow for the desktop's 900px but far too short
+   to stack, which would push the region panel off the bottom of the screen.
+   Keep the map and the sidebar side by side, as on a desktop, with a thinner
+   sidebar and a one-row top bar. Placed last so it wins over both blocks above,
+   and ui.js treats this case as not stacked to match. */
+@media (orientation: landscape) and (max-height: 560px) {
+  body { overflow: hidden; }
+  #app { height: 100%; }
+  #main { --side-w: clamp(236px, 36vw, 280px); grid-template-columns: 1fr var(--side-w); grid-template-rows: none; align-content: stretch; }
+  #mapWrap { height: auto; }
+  #sidebar { border-top: none; border-left: 1px solid var(--edge); overflow-y: auto; }
+  .log { max-height: none; }
+
+  .map-handle { top: 0; bottom: 0; left: auto; right: 0; width: 14px; height: auto; cursor: col-resize; }
+  .map-handle span { width: 2px; height: 34px; }
+  .map-tools { top: 8px; right: 16px; gap: 6px; }
+  button.maptool { width: 38px; height: 38px; font-size: 17px; }
+
+  /* Two tight rows: back link, turn and stats, then the three orders sharing
+     the second row evenly so End Turn is never pushed off the edge. */
+  #topbar { gap: 4px 10px; padding: 4px 10px; }
+  .brand { display: none; }
+  .turn-info { white-space: nowrap; }
+  .chip { padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+  .stats { gap: 0; }
+  .stat { min-width: 52px; padding: 0 4px; }
+  .stat label { font-size: 9px; letter-spacing: 1px; }
+  .stat b { font-size: 15px; }
+  .topbtns { gap: 6px; width: 100%; margin-left: 0; }
+  .topbtns button { min-width: 0; flex: 1; padding: 6px; letter-spacing: 1px; }
+}
