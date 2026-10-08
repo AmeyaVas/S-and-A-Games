@@ -45,7 +45,7 @@
     S: { w: 18, h: 16, hp: 30,   dmg: 14, color: '#d8a030', spark: 0.3 },
     R: { w: 30, h: 28, hp: 110,  dmg: 24, color: '#c8462c', spark: 0.6 },
     N: { w: 28, h: 18, hp: 80,   dmg: 10, color: '#b45a30', spark: 1 },
-    W: { w: 72, h: 72, hp: 1500, dmg: 26, color: '#ff6a3a', spark: 0 },
+    W: { w: 72, h: 72, hp: 1100, dmg: 26, color: '#ff6a3a', spark: 0 },
   };
 
   // Rock, back-wall and accent per depth: brown, slate, mossy, ember, violet slate.
@@ -248,7 +248,8 @@
 
   // ---------------------------------------------------------------- foes
   function spawnFoe(type, cx, cy, rows){
-    const d = FOES[type], depth = run ? run.depth : 0, scale = 1 + 0.15 * depth;
+    // Enemies toughen with depth; the Warden is tuned as-is and does not.
+    const d = FOES[type], depth = run && type !== 'W' ? run.depth : 0, scale = 1 + 0.15 * depth;
     const f = { type, w: d.w, h: d.h, hp: d.hp * scale, maxHp: d.hp * scale, dmg: d.dmg * (1 + 0.1 * depth),
       x: cx * T + T / 2 - d.w / 2, y: (cy + 1) * T - d.h, vx: 0, vy: 0, dir: Math.random() < 0.5 ? -1 : 1,
       flash: 0, t: rand(0, 3), state: 'idle', cd: rand(0.5, 2), ground: false, anim: rand(0, 6) };
@@ -621,7 +622,7 @@
       showToast(phase === 2 ? 'The Warden calls the swarm' : 'The Warden is enraged'); }
     const orbs = (n, sp, spread) => { const a0 = Math.atan2(pcy - cy, pcx - cx);
       for(let i = 0; i < n; i++){ const a = a0 + (n > 1 ? (i / (n - 1) - 0.5) * spread : 0);
-        hostile.push({ kind: 'orb', x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 6, dmg: 14, life: 5, color: '#ff8a4a' }); } };
+        hostile.push({ kind: 'orb', x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 6, dmg: 11, life: 5, color: '#ff8a4a' }); } };
     if(f.state === 'hover'){
       const tx = clamp(pcx + Math.sin(f.t * 0.7) * 200, A.x0 + f.w, A.x1 - f.w) - f.w / 2;
       const ty = A.y0 + 4 * T + Math.sin(f.t * 1.3) * 18;
@@ -647,7 +648,7 @@
       f.y += 900 * dt;
       if(f.y + f.h >= A.y1){ f.y = A.y1 - f.h; f.state = 'rest'; f.t = 0; cam.shake = 16;
         for(let i = 0; i < 14; i++){ const a = Math.PI + i / 13 * Math.PI;
-          hostile.push({ kind: 'orb', x: f.x + f.w / 2, y: f.y + f.h - 8, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, r: 6, dmg: 14, life: 4, color: '#ff8a4a' }); }
+          hostile.push({ kind: 'orb', x: f.x + f.w / 2, y: f.y + f.h - 8, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, r: 6, dmg: 11, life: 4, color: '#ff8a4a' }); }
         dust(f.x + f.w / 2, f.y + f.h, 20); }
     } else if(f.state === 'rest'){
       if(f.t > 1){ f.state = 'hover'; f.t = 0; f.cd = 0.8; }
