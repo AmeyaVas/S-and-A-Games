@@ -89,7 +89,7 @@ Splitter and Ricochet are rarer: at most one fixed spot per depth, plus a small 
 
 ## Relics
 
-Thick Hide (+25 max HP), Knapped Flint (+30% damage), Long Wick (+35% light), Ember Heart (sparks heal more), Slow Candle (timed powerups last longer), Prospector's Eye (kills may drop crystals), Quick Hands (+20% fire rate) and Deep Lungs (heal on reaching each depth). Taking the same relic twice stacks it.
+Thick Hide (+25 max HP), Knapped Flint (+30% damage), Long Wick (+35% light), Ember Heart (sparks heal more), Slow Candle (timed powerups last longer), Prospector's Eye (kills may drop crystals), Quick Hands (+20% fire rate) and Deep Lungs (heal on reaching each depth). Taking the same relic again stacks it, up to three copies; the pick screen shows how many you already hold, and a relic you have three of is no longer offered.
 
 ## What rerolls
 

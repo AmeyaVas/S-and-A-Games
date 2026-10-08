@@ -28,6 +28,7 @@
   };
   const ROLLABLE = ['overclock', 'feather', 'aegis', 'blink', 'flare'];
 
+  const RELIC_CAP = 3;
   const RELICS = {
     hide:   { name: 'Thick Hide',       what: '+25 max HP' },
     flint:  { name: 'Knapped Flint',    what: '+30% shot damage' },
@@ -258,8 +259,10 @@
       if(!save.bestTime || run.time < save.bestTime) { save.bestTime = run.time; run.newBest = true; }
       persist(); setMode('won'); return;
     }
-    const pool = Object.keys(RELICS), choice = [];
-    while(choice.length < 3){ const k = pick(pool, run.rng); if(!choice.includes(k)) choice.push(k); }
+    // Relics stack up to RELIC_CAP copies; a maxed one is never offered again.
+    const pool = Object.keys(RELICS).filter(k => (run.relics[k] || 0) < RELIC_CAP), choice = [];
+    while(choice.length < Math.min(3, pool.length)){ const k = pick(pool, run.rng); if(!choice.includes(k)) choice.push(k); }
+    if(!choice.length){ enterDepth(run.depth + 1); setMode('play'); return; }
     run.offer = choice;
     setMode('relic');
   }
@@ -1239,7 +1242,7 @@
       <p>Five cave depths, one life. Follow the glow-moss down, light beacons to heal, take a relic at the bottom of every depth, and break the Warden at the end.</p>
       ${keysHelp}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
-      <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span></button>`).join('')}</div>`;
+      <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span>${run.relics[k] ? `<span class="owned">You have ×${run.relics[k]} of ${RELIC_CAP}</span>` : ''}</button>`).join('')}</div>`;
     else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button></div>`;
     else if(m === 'pause') html = `<h2>Paused</h2><p>Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>

@@ -540,7 +540,7 @@ const DELVE_TUTORIAL = {
     { x: 393, y: 20, text: "Walls too tall to jump have a jump pad\nor a staircase. Each run rolls which." },
     { x: 420, y: 19, text: "Lifts carry you up.\nStand on one and wait." },
     { x: 455, y: 22, text: "In the caves, glow-moss marks\nthe way deeper. Follow it." },
-    { x: 474, y: 20, text: "At the bottom of every depth you\npick 1 of 3 relics. They last the\nwhole run, and stack if picked twice." },
+    { x: 474, y: 20, text: "At the bottom of every depth you\npick 1 of 3 relics. They last the\nwhole run, and stack up to three times." },
     { x: 482, y: 25, text: "Thick Hide\n+25 max HP" },
     { x: 493, y: 25, text: "Knapped Flint\n+30% damage" },
     { x: 504, y: 25, text: "Long Wick\n+35% light" },
