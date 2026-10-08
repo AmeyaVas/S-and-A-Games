@@ -288,3 +288,9 @@ kbd {
     background: var(--ground);
   }
 }
+
+/* Fullscreen on a phone: the back link goes (leaving fullscreen is the way
+   out) and the game takes the whole screen less the HUD. */
+:fullscreen body { padding: 4px; }
+:fullscreen .back { display: none; }
+:fullscreen #app { flex: 0 1 calc((100vh - 36px) * 960 / 544); }

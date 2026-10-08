@@ -1358,8 +1358,23 @@
     overlay.innerHTML = html; overlay.hidden = false;
     const first = overlay.querySelector('button'); if(first) first.focus();
   }
+  // On a touch screen, starting or resuming play goes fullscreen and, where the
+  // browser allows, locks to landscape. It needs the tap itself to be allowed,
+  // so it hangs off the overlay buttons. Browsers without it (iPhone Safari)
+  // just stay in the page.
+  function goFullscreen(){
+    if(!touchMode) return;
+    const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(!req || document.fullscreenElement || document.webkitFullscreenElement) return;
+    try {
+      const p = req.call(el, { navigationUI: 'hide' });
+      const lock = () => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch(e) {} };
+      if(p && p.then) p.then(lock, () => {}); else lock();
+    } catch(e) {}
+  }
   overlay.addEventListener('click', e => {
     const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.act || b.dataset.relic) goFullscreen();
     if(b.dataset.relic) chooseRelic(+b.dataset.relic);
     const a = b.dataset.act;
     if(a === 'start') newRun();
