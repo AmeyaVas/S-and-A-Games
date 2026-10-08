@@ -102,6 +102,44 @@
   .back:hover, .back:focus-visible{color:var(--accent); border-color:var(--accent); outline:none}
   /* On narrow screens the centred title would run under the link, so drop the page below it. */
   @media (max-width:520px){ body{padding-top:56px} }
+  /* A phone on its side. Stacked, the title, scores and hole row eat most of
+     the height and leave a board ~260px wide. Instead the board takes the full
+     height on the left, and everything else stacks in a column to its right,
+     back link at the top. The column never drops below 180px wide. */
+  @media (orientation:landscape) and (max-height:560px){
+    body{
+      display:grid; grid-template-columns:auto minmax(180px,1fr);
+      grid-template-rows:auto auto auto auto auto 1fr;
+      grid-template-areas:"wrap back" "wrap title" "wrap hud" "wrap sel" "wrap bar" "wrap hint";
+      gap:6px 10px; padding:6px; align-items:start; justify-items:stretch; align-content:start;
+    }
+    .back{grid-area:back; position:static; justify-self:start}
+    h1{grid-area:title; font-size:12px; letter-spacing:.2em}
+    #wrap{grid-area:wrap; width:min(calc((100vh - 12px) * 1.5), calc(100vw - 202px))}
+    #hud{grid-area:hud; width:100%; display:grid; grid-template-columns:1fr 1fr; gap:4px}
+    #hud .chip:first-child{grid-column:1 / -1}
+    .chip{min-width:0; padding:3px 6px; border-radius:8px}
+    .chip .k{font-size:9px}
+    .chip .v{font-size:15px}
+    .chip .v.name{font-size:12px; padding-top:1px}
+    #sel{grid-area:sel; width:100%; gap:4px; justify-content:flex-start}
+    .selgroup{gap:4px}
+    .selgroup .lbl{display:none}
+    .selgroup + .selgroup{border-left:0; padding-left:0}
+    #sel button{width:26px; height:26px; font-size:11px}
+    #bar{grid-area:bar; width:100%; gap:6px; justify-content:flex-start}
+    #bar button{padding:6px 10px; font-size:12px}
+    #hint{grid-area:hint; font-size:11px; text-align:left}
+  }
+  /* The shortest phones (iPhone SE on its side): lose the title and keep the two
+     buttons on one row, so the hint still fits under them. */
+  @media (orientation:landscape) and (max-height:340px){
+    h1{display:none}
+    #bar{flex-wrap:nowrap}
+    #bar button{padding:5px 8px; font-size:11px; white-space:nowrap}
+    body{row-gap:4px}
+    .chip{padding:2px 6px}
+  }
 </style>
 </head>
 <body>
