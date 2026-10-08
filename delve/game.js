@@ -1369,6 +1369,7 @@
     else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button></div>`;
     else if(m === 'pause') html = `<h2>Paused</h2><p>${DIFFS[run.diff].name} &nbsp; Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
+      ${Object.keys(run.relics).length ? `<div class="held">${Object.entries(run.relics).map(([k, n]) => `<span class="chip relic">${RELICS[k].name}${n > 1 ? '<b>×' + n + '</b>' : ''} — ${RELICS[k].what}</span>`).join('')}</div>` : '<p>No relics yet.</p>'}
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button></div>`;
     else if(m === 'tutorialDone') html = `<h2 class="good">Ready</h2><p>That's everything. A real run is five depths and one life: no checkpoints, fresh rolls every time, and a relic at the bottom of each depth.</p>
       ${diffs}<div class="row"><button data-act="start">Begin descent</button></div>`;
