@@ -875,14 +875,20 @@ select:disabled { opacity: 0.4; }
      to a sliver on a short phone. */
   #main { --map-h: 52vh; }
   .map-tools { top: 10px; right: 10px; gap: 8px; }
-  button.maptool { width: 40px; height: 40px; font-size: 18px; }
-  .map-handle { height: 18px; }
+  button.maptool { width: 44px; height: 44px; font-size: 18px; }
+  /* A 44px grab area centred on the map's bottom edge: half over the map,
+     half over the sidebar's heading, so it costs the map no tappable strip.
+     The grip itself is still the short 2px line. */
+  .map-handle { height: 44px; bottom: -22px; }
 
   /* Small caps run wider than the sentence case this bar used to hold, and a
      104px floor plus the 18px flex gap no longer leaves three labels room for
      one line each. Let them share the row evenly instead. */
   .topbtns { gap: 6px; width: 100%; }
-  .topbtns button { min-width: 0; flex: 1; padding: 9px 6px; letter-spacing: 1px; }
+  .topbtns button { min-width: 0; flex: 1; padding: 9px 6px; letter-spacing: 1px; min-height: 44px; }
+  /* 44px tap targets: the back link and the overlay's own buttons. */
+  .back { display: inline-flex; align-items: center; min-height: 44px; }
+  .ovbtns button { min-height: 44px; }
 
   .ovtitle { font-size: 28px; letter-spacing: 3px; }
   .ovtitle.small { font-size: 21px; letter-spacing: 2px; }
