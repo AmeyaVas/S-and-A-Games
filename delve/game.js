@@ -315,6 +315,7 @@
     const hp = DIFFS[save.diff].hp;
     run = { seed, diff: save.diff, depth: 0, hp, maxHp: hp, relics: {}, perm: {}, kills: 0, time: 0,
       rng: mulberry(seed ^ 0x51ED) };
+    player = null;   // a fresh run carries no powerups over from the last one
     enterDepth(0);
     setMode('play');
   }
