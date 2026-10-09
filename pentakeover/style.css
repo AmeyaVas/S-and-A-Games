@@ -730,7 +730,7 @@ select:disabled { opacity: 0.4; }
   gap: 14px;
   margin-top: 20px;
 }
-.codex-notes h4 {
+.codex-notes h3 {
   margin: 0 0 4px;
   font-family: var(--display);
   font-size: 11px;
@@ -805,7 +805,7 @@ select:disabled { opacity: 0.4; }
   padding: 15px 17px;
   background: #253040;
 }
-.gsec h4 {
+.gsec h2 {
   margin: 0 0 10px;
   padding-bottom: 5px;
   border-bottom: 1px solid var(--edge-soft);

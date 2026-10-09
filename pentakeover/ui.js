@@ -263,7 +263,7 @@
 
       <div class="guide">
         <section class="gsec">
-          <h4>A turn, in order</h4>
+          <h2>A turn, in order</h2>
           <ol class="steps">
             <li><b>Income arrives</b> automatically, minus the wages of your army.</li>
             <li><b>Recruit</b> at any station — your seat or a citadel you hold. New troops march next turn.</li>
@@ -275,7 +275,7 @@
         </section>
 
         <section class="gsec">
-          <h4>Giving orders</h4>
+          <h2>Giving orders</h2>
           <p>Clicking a region you own selects none of its units. Tick the ones you want to
              send (or press <b>All</b>), then click a highlighted region.</p>
           <p><b>Move / Attack</b> goes into a neighbour. <b>Bombard</b> (Ballistas only)
@@ -287,7 +287,7 @@
         </section>
 
         <section class="gsec">
-          <h4>Moving the map</h4>
+          <h2>Moving the map</h2>
           <p>Drag the map to slide it, and use the wheel or the <b>+</b> and <b>−</b>
              buttons to zoom; <b>⤢</b> puts the whole continent back in view. On a
              touch screen pinch to zoom and use <b>two fingers</b> to slide — one
@@ -297,7 +297,7 @@
         </section>
 
         <section class="gsec">
-          <h4>Buying land</h4>
+          <h2>Buying land</h2>
           <p>Select a station and the <b>Expand</b> panel prices every unclaimed Free Hold
              on its border; the map dashes them in gold. There is no limit but your
              treasury — each expansion in the same turn costs
@@ -309,19 +309,19 @@
         </section>
 
         <section class="gsec">
-          <h4>The counter triangle</h4>
+          <h2>The counter triangle</h2>
           ${counterTriangle()}
           <p>The bonus is biggest against a <b>pure</b> army and small against a mixed one,
              so fielding a bit of everything is itself a defence.</p>
         </section>
 
         <section class="gsec">
-          <h4>Reading the map</h4>
+          <h2>Reading the map</h2>
           ${legend()}
         </section>
 
         <section class="gsec">
-          <h4>Three things that win games</h4>
+          <h2>Three things that win games</h2>
           <p><b>Bring militia.</b> Casualties always land on your cheapest units first, so a
              screen of militia is armour for the expensive troops behind it.</p>
           <p><b>Respect the ground.</b> Defenders multiply their strength by terrain. A
@@ -331,7 +331,7 @@
         </section>
 
         <section class="gsec">
-          <h4>Keys</h4>
+          <h2>Keys</h2>
           <p class="keys">
             <span><kbd>Space</kbd> end turn</span>
             <span><kbd>Esc</kbd> clear selection</span>
@@ -379,40 +379,40 @@
       </table>
       <div class="codex-notes">
         <div>
-          <h4>The triangle</h4>
+          <h3>The triangle</h3>
           <p>Lancer beats Ballista beats Warden beats Lancer. The bonus is up to
              <b>+75%</b>, scaled by how much of the enemy stack is actually that type —
              so a counter is worth most against a pure army and little against a mixed one.</p>
         </div>
         <div>
-          <h4>Casualties</h4>
+          <h3>Casualties</h3>
           <p>Damage lands on the <b>cheapest units first</b>. Three militia in front of a
              ballista is not padding, it is armour.</p>
         </div>
         <div>
-          <h4>Ground</h4>
+          <h3>Ground</h3>
           <p>Defenders multiply their power by terrain: plains +0%, forest +20%,
              hills +40%, mountains +65%. A capital adds +30%, a citadel +50%.</p>
         </div>
         <div>
-          <h4>Orders</h4>
+          <h3>Orders</h3>
           <p><b>Move/Attack</b> into a neighbour. <b>Bombard</b> hits an adjacent region
              without entering it, and never captures. <b>Redeploy</b> rails unmoved units
              anywhere in your connected territory for ${REDEPLOY_COST} gold each.</p>
         </div>
         <div>
-          <h4>Winning</h4>
+          <h3>Winning</h3>
           <p>Hold all ${CITADEL_COUNT} citadels at the start of your turn — meaning you survived a
              full round holding them — or eliminate everyone else.</p>
         </div>
         <div>
-          <h4>Money</h4>
+          <h3>Money</h3>
           <p>Income arrives at the start of your turn, minus upkeep. Go into the red and
              your cheapest paid troops desert. Recruit only at your stations — your seat
              and the citadels you hold.</p>
         </div>
         <div>
-          <h4>Expansion</h4>
+          <h3>Expansion</h3>
           <p>A station can buy an adjacent <b>Free Hold</b> outright, as many times a turn as
              the treasury allows — but each one costs ${Math.round((EXPAND_STEP - 1) * 100)}%
              more than the last, and the ground arrives undefended.</p>
@@ -932,6 +932,28 @@
   const MIN_MAP = 180;
   let mapHPinned = false;   // true once the player has sized the map themselves
 
+  /* The handle is a focusable separator, so assistive tech needs its current
+   * size and range. What it sizes depends on the layout: the sidebar's width
+   * side by side, the map's height once stacked. */
+  function syncHandle() {
+    const handle = $('mapHandle');
+    if (STACKED()) {
+      const h = Math.round($('mapWrap').getBoundingClientRect().height);
+      handle.setAttribute('aria-orientation', 'horizontal');
+      handle.setAttribute('aria-valuemin', MIN_MAP);
+      handle.setAttribute('aria-valuemax', Math.round(window.innerHeight * 1.4));
+      handle.setAttribute('aria-valuenow', h);
+      handle.setAttribute('aria-valuetext', `Map ${h} pixels tall`);
+    } else {
+      const w = Math.round($('sidebar').getBoundingClientRect().width);
+      handle.setAttribute('aria-orientation', 'vertical');
+      handle.setAttribute('aria-valuemin', MIN_SIDE);
+      handle.setAttribute('aria-valuemax', MAX_SIDE);
+      handle.setAttribute('aria-valuenow', w);
+      handle.setAttribute('aria-valuetext', `Sidebar ${w} pixels wide`);
+    }
+  }
+
   /* Stacked, a pane taller than the continent is dead space above and below it,
    * and on a phone that is most of the screen. Give the map the height its own
    * shape asks for until the player drags the handle and takes over. */
@@ -969,6 +991,7 @@
         main.style.setProperty('--side-w', Math.round(w) + 'px');
       }
       Renderer.resize();
+      syncHandle();
     };
     const up = () => {
       handle.classList.remove('dragging');
@@ -1003,6 +1026,7 @@
       main.style.setProperty('--side-w', w + 'px');
     }
     Renderer.resize();
+    syncHandle();
   }
 
   /* ---------- boot ---------- */
@@ -1025,7 +1049,8 @@
     Renderer.init($('map'));
     autoMapHeight();
     Renderer.resize();
-    window.addEventListener('resize', () => { autoMapHeight(); Renderer.resize(); });
+    syncHandle();
+    window.addEventListener('resize', () => { autoMapHeight(); Renderer.resize(); syncHandle(); });
     $('map').addEventListener('mousemove', onCanvasMove);
     $('map').addEventListener('mouseleave', () => { hover = null; syncForecast(); });
     $('map').addEventListener('click', onCanvasClick);
