@@ -104,6 +104,10 @@ body {
   filter: brightness(1.2);
 }
 
+/* 44px tap targets: Start Wave rendered 42px tall, the game-over Restart
+   less. */
+#restart-btn, #start-wave-btn { min-height: 44px; }
+
 #start-wave-btn {
   width: 100%;
   margin: 10px 0 4px;
