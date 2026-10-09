@@ -54,11 +54,26 @@
     border:1px solid var(--edge); border-radius:var(--r); background:var(--panel);
     color:inherit; transition:transform .18s ease, box-shadow .18s ease;
   }
-  .game:hover, .game:focus-visible{
-    transform:translateY(-3px); box-shadow:0 18px 40px -18px #000;
-    outline:none; border-color:var(--accent);
+  /* Hover only where a pointer can actually hover: a tap on a phone fakes
+     :hover and leaves the card stuck lifted. Keyboard focus always gets the
+     border, shadow and outline; the lift itself is motion, so it is skipped
+     under reduced motion. */
+  .game:focus-visible{
+    box-shadow:0 18px 40px -18px #000; border-color:var(--accent);
+    outline:2px solid var(--accent); outline-offset:3px;
   }
-  .game:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+  @media (hover:hover) and (pointer:fine){
+    .game:hover{box-shadow:0 18px 40px -18px #000; border-color:var(--accent)}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .game:focus-visible{transform:translateY(-3px)}
+  }
+  @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+    .game:hover{transform:translateY(-3px)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .game{transition:none}
+  }
 
   /* Each card's art is a real capture from its own game, cropped to this box.
      The flat colour behind each one is that game's own backdrop, so a card that

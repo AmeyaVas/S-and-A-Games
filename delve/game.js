@@ -207,6 +207,10 @@
   let run = null, lvl = null, player = null;
   let foes = [], bullets = [], hostile = [], drops = [], parts = [], frags = [], flashes = [], texts = [];
   let cam = { x: 0, y: 0, shake: 0 }, toast = null, hurtFlash = 0, dripClock = 0;
+  // Reduced motion: no screen shake, and light flashes and the hurt tint at
+  // half strength. The tint stays because it is how you know you were hit.
+  // Read live, so changing the system setting mid-run takes effect at once.
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const motes = Array.from({ length: 40 }, () => ({ x: Math.random() * VW, y: Math.random() * VH,
     vx: rand(-6, 6), vy: rand(-4, 4), s: rand(1, 2.5) }));
 
@@ -1005,7 +1009,8 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if(!lvl){ ctx.fillStyle = '#050404'; ctx.fillRect(0, 0, VW, VH); return; }
     const pal = lvl.pal;
-    const sx = cam.shake ? rand(-cam.shake, cam.shake) * 0.5 : 0, sy = cam.shake ? rand(-cam.shake, cam.shake) * 0.5 : 0;
+    const shake = reducedMotion.matches ? 0 : cam.shake;
+    const sx = shake ? rand(-shake, shake) * 0.5 : 0, sy = shake ? rand(-shake, shake) * 0.5 : 0;
     const ox = Math.round(cam.x + sx), oy = Math.round(cam.y + sy);
     const lights = [];
 
@@ -1133,7 +1138,8 @@
     for(const p of parts){ ctx.globalAlpha = clamp(p.life / p.max * 1.5, 0, 1); ctx.fillStyle = p.color;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
     ctx.globalAlpha = 1;
-    for(const f of flashes) lights.push([f.x, f.y, f.r * (0.6 + 0.4 * f.life / f.max), f.life / f.max, f.color]);
+    const flashScale = reducedMotion.matches ? 0.5 : 1;
+    for(const f of flashes) lights.push([f.x, f.y, f.r * (0.6 + 0.4 * f.life / f.max), f.life / f.max * flashScale, f.color]);
 
     // Coloured glow, added before the darkness so it is only visible where lit.
     ctx.globalCompositeOperation = 'lighter';
@@ -1194,7 +1200,7 @@
     }
     if(hurtFlash > 0){
       const g = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.3, VW / 2, VH / 2, VW * 0.65);
-      g.addColorStop(0, 'rgba(224,80,60,0)'); g.addColorStop(1, `rgba(224,80,60,${hurtFlash})`);
+      g.addColorStop(0, 'rgba(224,80,60,0)'); g.addColorStop(1, `rgba(224,80,60,${reducedMotion.matches ? hurtFlash * 0.5 : hurtFlash})`);
       ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
     }
   }
@@ -1379,6 +1385,8 @@
     else if(m === 'won') html = `<h2 class="good">The Warden falls</h2><p>All five depths in <b>${fmtTime(run.time)}</b> with <b>${run.kills}</b> kills on ${DIFFS[run.diff].name}.${run.newBest ? ' A new best run.' : ''}</p>
       ${diffs}${records}<div class="row"><button data-act="start">Delve again</button></div>`;
     overlay.innerHTML = html; overlay.hidden = false;
+    // Every screen opens with an <h2>; it names the dialog (aria-labelledby).
+    const title = overlay.querySelector('h2'); if(title) title.id = 'overlay-title';
     const first = overlay.querySelector('button:not(.diff)'); if(first) first.focus();
   }
   // On a touch screen, starting or resuming play goes fullscreen and, where the
