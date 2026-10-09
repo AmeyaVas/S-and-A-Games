@@ -1385,6 +1385,8 @@
     else if(m === 'won') html = `<h2 class="good">The Warden falls</h2><p>All five depths in <b>${fmtTime(run.time)}</b> with <b>${run.kills}</b> kills on ${DIFFS[run.diff].name}.${run.newBest ? ' A new best run.' : ''}</p>
       ${diffs}${records}<div class="row"><button data-act="start">Delve again</button></div>`;
     overlay.innerHTML = html; overlay.hidden = false;
+    // Every screen opens with an <h2>; it names the dialog (aria-labelledby).
+    const title = overlay.querySelector('h2'); if(title) title.id = 'overlay-title';
     const first = overlay.querySelector('button:not(.diff)'); if(first) first.focus();
   }
   // On a touch screen, starting or resuming play goes fullscreen and, where the
