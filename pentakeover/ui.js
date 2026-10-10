@@ -782,7 +782,7 @@
     ai = createAI(game, game.current);
     aiSteps = 0;
     syncTop();
-    aiTimer = setTimeout(stepAI, 420);
+    aiTimer = setTimeout(stepAI, admin.fastAI ? 0 : 420);
   }
 
   function stepAI() {
@@ -803,7 +803,7 @@
     // move of the turn does not need the same dwell time.
     if (acted) aiSteps++;
     const dwell = aiSteps < 8 ? 300 : aiSteps < 20 ? 140 : 60;
-    aiTimer = setTimeout(stepAI, acted ? dwell : 30);
+    aiTimer = setTimeout(stepAI, admin.fastAI ? 0 : acted ? dwell : 30);
   }
 
   function stopAI() {
@@ -1005,6 +1005,207 @@
     Renderer.resize();
   }
 
+  /* ---------- testing tools ---------- */
+
+  const ADMIN_KEY = 'pentakeover.admin';
+  let adminOn = false;
+  try { adminOn = localStorage.getItem(ADMIN_KEY) === '1'; } catch (e) { /* stays off */ }
+  const admin = { fastAI: false, el: null, info: null, btn: null };
+  let typed = '';
+  let titleTaps = [];
+
+  function initAdmin() {
+    document.addEventListener('keydown', e => {
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (adminOn && e.code === 'Backquote') { toggleAdmin(); return; }
+      if (!adminOn && /^[a-z]$/i.test(e.key)) {
+        typed = (typed + e.key.toLowerCase()).slice(-5);
+        if (typed === 'admin') unlockAdmin();
+      }
+    });
+    document.addEventListener('click', e => {
+      if (adminOn || !e.target.closest('.brand, .ovtitle')) return;
+      const now = performance.now();
+      titleTaps = titleTaps.filter(t => now - t < 3000).concat(now);
+      if (titleTaps.length >= 5) unlockAdmin();
+    });
+    if (adminOn) showAdminButton();
+    setInterval(refreshAdmin, 250);
+  }
+
+  function unlockAdmin() {
+    adminOn = true; typed = ''; titleTaps = [];
+    try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) { /* this visit only */ }
+    showAdminButton();
+    toggleAdmin();
+  }
+  function lockAdmin() {
+    adminOn = false; admin.fastAI = false;
+    try { localStorage.removeItem(ADMIN_KEY); } catch (e) { /* nothing stored */ }
+    if (admin.el) admin.el.hidden = true;
+    if (admin.btn) admin.btn.hidden = true;
+  }
+  // Phones have no backtick, so the top bar gets a button while unlocked.
+  function showAdminButton() {
+    if (!admin.btn) {
+      admin.btn = document.createElement('button');
+      admin.btn.id = 'btnAdmin';
+      admin.btn.className = 'ghost';
+      admin.btn.type = 'button';
+      admin.btn.textContent = 'Admin';
+      admin.btn.addEventListener('click', toggleAdmin);
+      $('btnCodex').before(admin.btn);
+    }
+    admin.btn.hidden = false;
+  }
+  function toggleAdmin() {
+    if (!adminOn) return;
+    if (!admin.el) buildAdmin();
+    admin.el.hidden = !admin.el.hidden;
+    refreshAdmin();
+  }
+
+  function buildAdmin() {
+    const btn = (act, label, arg = '') => `<button type="button" data-a="${act}" data-arg="${arg}">${label}</button>`;
+    const el = document.createElement('aside');
+    el.id = 'admin'; el.hidden = true;
+    el.innerHTML = `<header><b>Admin</b><span>${btn('lock', 'Lock admin')}<button type="button" data-a="close" aria-label="Close">&times;</button></span></header>
+      <section><h3>Faction on turn</h3>
+        <div class="btns">${btn('gold', '+50 gold', 50)}${btn('gold', '+500 gold', 500)}<input id="adGold" inputmode="numeric" placeholder="gold">${btn('setgold', 'Set')}</div>
+        <div class="btns">${btn('refresh', 'Refresh moves')}${btn('heal', 'Heal all units')}</div></section>
+      <section><h3>Turns</h3>
+        <div class="btns">${btn('end', 'End this turn')}${btn('mine', 'Skip to my turn')}${btn('fast', 'Instant AI')}</div></section>
+      <section><h3>Selected region</h3>
+        <p class="note" id="adRegion">Click a region on the map.</p>
+        <div class="btns"><select id="adOwner"></select>${btn('owner', 'Set owner')}</div>
+        <div class="btns">${UNIT_ORDER.map(t => btn('unit', '+' + UNITS[t].name, t)).join('')}</div>
+        <div class="btns">${btn('unit5', '+5 Militia', 'militia')}${btn('healr', 'Heal here')}${btn('clearu', 'Remove units')}</div></section>
+      <section><h3>Victory</h3>
+        <div class="btns">${btn('citadels', 'Give all citadels')}${btn('win', 'Win now')}</div>
+        <div class="btns"><select id="adElim"></select>${btn('elim', 'Eliminate')}</div></section>
+      <section><h3>Live</h3><pre id="adInfo"></pre></section>`;
+    document.body.appendChild(el);
+    admin.el = el; admin.info = el.querySelector('#adInfo');
+    el.addEventListener('click', e => { const b = e.target.closest('button'); if (b) adminAct(b.dataset.a, b.dataset.arg); });
+  }
+
+  // Region changes bypass the rules on purpose, then settle the world the way a
+  // battle would: eliminations, the winner screen, and every panel redrawn.
+  function settle() {
+    checkElimination(game);
+    syncAll();
+    finishIfOver();
+  }
+
+  function adminAct(a, arg) {
+    if (a === 'close') { admin.el.hidden = true; return; }
+    if (a === 'lock') { lockAdmin(); return; }
+    if (a === 'fast') { admin.fastAI = !admin.fastAI; refreshAdmin(); return; }
+    if (!game || game.winner !== null) { refreshAdmin(); return; }
+    const f = game.factions[game.current];
+    const r = selectedRegion();
+    const num = id => { const v = Math.round(+$(id).value); return Number.isFinite(v) && $(id).value !== '' ? v : null; };
+    if (a === 'gold') f.gold += +arg;
+    if (a === 'setgold' && num('adGold') !== null) f.gold = num('adGold');
+    if (a === 'refresh' || a === 'heal') {
+      for (const reg of game.regions) for (const u of reg.units) {
+        if (u.owner !== f.id) continue;
+        if (a === 'refresh') { u.mp = UNITS[u.type].move; u.bombarded = false; u.blitzed = false; }
+        else u.hp = u.maxHp;
+      }
+    }
+    if (a === 'end') {
+      stopAI(); clearOrders(); sel.region = null;
+      endTurn(game); syncAll();
+      if (!finishIfOver()) maybeRunAI();
+      refreshAdmin(); return;
+    }
+    if (a === 'mine') {
+      // End this turn, then play every computer turn out instantly until a
+      // human is up again.
+      stopAI();
+      if (!f.isAI) endTurn(game);
+      for (let guard = 0; game.winner === null && game.factions[game.current].isAI && guard < 60; guard++) {
+        const bot = createAI(game, game.current);
+        for (let n = 0; !bot.done && game.winner === null && n < 2000; n++) bot.step();
+        if (game.winner === null) endTurn(game);
+      }
+      clearOrders(); sel.region = null; syncAll();
+      if (!finishIfOver()) maybeRunAI();
+      refreshAdmin(); return;
+    }
+    if (r) {
+      if (a === 'owner') {
+        const v = $('adOwner').value, owner = v === 'null' ? null : +v;
+        r.owner = owner;
+        // The garrison changes hands with the land, and a faction that had
+        // been knocked out is back in the war.
+        for (const u of r.units) u.owner = owner;
+        if (owner !== null) game.factions[owner].alive = true;
+      }
+      if (a === 'unit' || a === 'unit5') {
+        for (let i = 0; i < (a === 'unit5' ? 5 : 1); i++) {
+          const u = makeUnit(arg, r.owner);
+          u.mp = r.owner === game.current ? UNITS[arg].move : 0;
+          r.units.push(u);
+        }
+      }
+      if (a === 'healr') for (const u of r.units) u.hp = u.maxHp;
+      if (a === 'clearu') { r.units.length = 0; clearOrders(); }
+    }
+    if (a === 'citadels') for (const id of game.citadels) { const c = game.regions[id]; c.owner = f.id; for (const u of c.units) u.owner = f.id; }
+    if (a === 'win') declareWinner(game, f.id, 'conquest');
+    if (a === 'elim') {
+      const id = +$('adElim').value;
+      if (Number.isInteger(id) && game.factions[id] && game.factions[id].alive) {
+        for (const reg of game.regions) {
+          reg.units = reg.units.filter(u => u.owner !== id);
+          if (reg.owner === id) reg.owner = null;
+        }
+        // The faction on turn going down hands the turn on.
+        if (id === game.current) { checkElimination(game); if (game.winner === null) { stopAI(); endTurn(game); } }
+      }
+    }
+    settle();
+    if (game.winner === null && game.factions[game.current].isAI && !aiTimer) maybeRunAI();
+    refreshAdmin();
+  }
+
+  function refreshAdmin() {
+    if (!admin.el || admin.el.hidden) return;
+    const on = (sel2, v) => { for (const b of admin.el.querySelectorAll(sel2)) b.classList.toggle('on', v); };
+    on('[data-a=fast]', admin.fastAI);
+    if (!game) { admin.info.textContent = 'No war in progress.'; return; }
+    // Faction pickers follow the current roster.
+    const opts = game.factions.map(f => `<option value="${f.id}">${f.label}</option>`).join('');
+    const own = $('adOwner'), elim = $('adElim');
+    if (own.dataset.roster !== String(game.seed)) {
+      own.innerHTML = opts + `<option value="null">${NEUTRAL.name}</option>`;
+      elim.innerHTML = opts;
+      own.dataset.roster = String(game.seed);
+    }
+    const r = selectedRegion();
+    $('adRegion').textContent = r
+      ? `${regionLabel(r)} — ${factionName(game, r.owner)} · ${r.kind} · ${TERRAIN[r.terrain].name} · ${r.units.length} units`
+      : 'Click a region on the map.';
+    const f = game.factions[game.current];
+    const lines = [
+      `round ${game.round}   seed ${game.seed}${game.winner ? '   WON' : ''}`,
+      `on turn ${f.label}${f.isAI ? ' (CPU ' + DIFFICULTY[f.difficulty].name + ')' : ''}`,
+      `ai ${aiTimer ? 'thinking' : 'idle'}${admin.fastAI ? ' · instant' : ''}`,
+      '',
+      ...game.factions.map(x => `${x.alive ? ' ' : '✕'} ${x.label.split(' ')[0].padEnd(8)} ${String(x.gold).padStart(4)}g ${(netIncome(game, x.id) >= 0 ? '+' : '') + netIncome(game, x.id)}/t  ${ownedRegions(game, x.id).length}r ${citadelsHeld(game, x.id)}c ${armySize(game, x.id)}u`),
+      '',
+      `citadels ${game.citadels.map(id => { const o = game.regions[id].owner; return o === null ? '·' : game.factions[o].label[0]; }).join(' ')}`,
+    ];
+    if (r) {
+      lines.push('', `region #${r.id} ${regionLabel(r)}  income ${regionIncome(game, r)}`);
+      for (const u of r.units) lines.push(`  ${UNITS[u.type].name.padEnd(8)} hp ${Math.round(u.hp)}/${u.maxHp}  mp ${u.mp}  ${factionName(game, u.owner).split(' ')[0]}`);
+    }
+    admin.info.textContent = lines.join('\n');
+  }
+
   /* ---------- boot ---------- */
 
   function frame() {
@@ -1055,6 +1256,7 @@
     });
     $('btnSelectNone').addEventListener('click', () => { clearOrders(); syncRegion(); });
     document.addEventListener('keydown', onKey);
+    initAdmin();
     if (guideSeen()) showSetup(); else showHowToPlay();
     frame();
   });
