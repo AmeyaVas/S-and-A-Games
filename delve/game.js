@@ -122,7 +122,7 @@
     if(e.code === 'Escape'){ if(mode === 'play') setMode('pause'); else if(mode === 'pause') setMode('play'); }
     if(mode === 'relic' && /^Digit[123]$/.test(e.code)) chooseRelic(+e.code[5] - 1);
     if(adminOn && e.code === 'Backquote') toggleAdmin();
-    if(mode === 'title' && !adminOn && e.key && e.key.length === 1){
+    if((mode === 'title' || mode === 'pause') && !adminOn && e.key && e.key.length === 1){
       typed = (typed + e.key.toLowerCase()).slice(-5);
       if(typed === 'admin') unlockAdmin();
     }
@@ -1398,9 +1398,9 @@
       ${keysHelp}${diffs}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
       <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span>${run.relics[k] ? `<span class="owned">You have ×${run.relics[k]} of ${RELIC_CAP}</span>` : ''}</button>`).join('')}</div>`;
-    else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
+    else if(m === 'pause' && run.tutorial) html = `<h2>Delve</h2><p class="paused">Paused</p><p>Tutorial</p>
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
-    else if(m === 'pause') html = `<h2>Paused</h2><p>${DIFFS[run.diff].name} &nbsp; Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
+    else if(m === 'pause') html = `<h2>Delve</h2><p class="paused">Paused</p><p>${DIFFS[run.diff].name} &nbsp; Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
       ${Object.keys(run.relics).length ? `<div class="held">${Object.entries(run.relics).map(([k, n]) => `<span class="chip relic">${RELICS[k].name}${n > 1 ? '<b>×' + n + '</b>' : ''} — ${RELICS[k].what}</span>`).join('')}</div>` : '<p>No relics yet.</p>'}
       <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
     else if(m === 'tutorialDone') html = `<h2 class="good">Ready</h2><p>That's everything. A real run is five depths and one life: no checkpoints, fresh rolls every time, and a relic at the bottom of each depth.</p>
@@ -1476,7 +1476,7 @@
   }
   let titleTaps = [];
   overlay.addEventListener('click', e => {
-    if(mode !== 'title' || adminOn || !e.target.closest('h2')) return;
+    if((mode !== 'title' && mode !== 'pause') || adminOn || !e.target.closest('h2')) return;
     const now = performance.now();
     titleTaps = titleTaps.filter(t => now - t < 3000).concat(now);
     if(titleTaps.length >= 5) unlockAdmin();

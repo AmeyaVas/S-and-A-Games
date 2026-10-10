@@ -185,6 +185,7 @@ h1 {
 
 #overlay h2.bad { color: var(--hurt); text-shadow: 0 0 18px #e0503c66; }
 #overlay h2.good { color: var(--cyan); text-shadow: 0 0 18px #5fe3f066; }
+#overlay p.paused { margin-top: -10px; font-size: 12px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--ink); }
 
 #overlay p { color: var(--muted); max-width: 560px; }
 #overlay p b { color: var(--ink); font-family: var(--num); }
