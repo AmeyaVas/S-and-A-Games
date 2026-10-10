@@ -1387,7 +1387,10 @@
     overlay.innerHTML = html; overlay.hidden = false;
     // Every screen opens with an <h2>; it names the dialog (aria-labelledby).
     const title = overlay.querySelector('h2'); if(title) title.id = 'overlay-title';
-    const first = overlay.querySelector('button:not(.diff)'); if(first) first.focus();
+    // Focus the main button without scrolling: on a short screen that would
+    // push the heading out of view.
+    overlay.scrollTop = 0;
+    const first = overlay.querySelector('button:not(.diff)'); if(first) first.focus({ preventScroll: true });
   }
   // On a touch screen, starting or resuming play goes fullscreen and, where the
   // browser allows, locks to landscape. It needs the tap itself to be allowed,
