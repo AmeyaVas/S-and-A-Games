@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#16110c">
 <title>Castle Defense</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="back" href="../index.html">&larr; All games</a>
-  <div id="app">
+  <main id="app">
     <p id="landscape-tip">&#10227; Best in landscape &mdash; turn your phone sideways</p>
     <div id="game-area">
-      <canvas id="canvas" width="750" height="500"></canvas>
+      <canvas id="canvas" width="750" height="500" role="img" aria-label="Castle Defense battlefield: the enemy path to your gate and the towers guarding it. Choose a tower in the sidebar, then click open ground to build."></canvas>
       <div id="overlay" class="hidden">
         <div id="overlay-message"></div>
         <button id="restart-btn">Restart</button>
@@ -46,7 +48,7 @@
 
       <p id="hint">Choose a tower to garrison, then tap or click open ground to build it. Defend the gate!</p>
     </div>
-  </div>
+  </main>
 
   <script src="game.js"></script>
 </body>
