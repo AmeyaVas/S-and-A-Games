@@ -185,6 +185,7 @@ h1 {
 
 #overlay h2.bad { color: var(--hurt); text-shadow: 0 0 18px #e0503c66; }
 #overlay h2.good { color: var(--cyan); text-shadow: 0 0 18px #5fe3f066; }
+#overlay p.paused { margin-top: -10px; font-size: 12px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--ink); }
 
 #overlay p { color: var(--muted); max-width: 560px; }
 #overlay p b { color: var(--ink); font-family: var(--num); }
@@ -260,7 +261,10 @@ kbd {
   /* The side padding clears the notch and the home bar when the page runs
      edge to edge (viewport-fit=cover). */
   body { padding: 8px max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left)); gap: 8px; align-items: flex-start; }
-  .back { position: static; flex: none; }
+  .back { position: static; flex: none; white-space: nowrap; }
+  /* A blank twin of the back link on the right keeps the game centred. It
+     gives way first when the screen is too narrow for both. */
+  body::after { content: ''; flex: 0 1000 107px; }
   #app { width: auto; flex: 0 1 calc((100vh - 48px) * 960 / 544); flex-basis: calc((100dvh - 48px - env(safe-area-inset-bottom)) * 960 / 544); min-width: 0; gap: 4px; }
   #overlay { overflow-y: auto; justify-content: safe center; }
 
@@ -293,6 +297,9 @@ kbd {
   #overlay { gap: 6px; padding: 10px; }
   #overlay h2 { font-size: 24px; }
   #overlay p { font-size: 13px; }
+  /* The sticks are labelled on screen and the tutorial teaches them, so the
+     title spends its little height on the game, not the controls. */
+  #overlay .keys { display: none; }
 }
 
 @media (pointer: coarse) and (orientation: portrait) {
@@ -315,7 +322,7 @@ kbd {
 /* Fullscreen on a phone: the back link goes (leaving fullscreen is the way
    out) and the game takes the whole screen less the HUD. */
 :fullscreen body { padding: 4px; }
-:fullscreen .back { display: none; }
+:fullscreen .back, :fullscreen body::after { display: none; }
 :fullscreen #app { flex: 0 1 calc((100vh - 36px) * 960 / 544); }
 
 /* Difficulty: one segmented row, the chosen one lit. */
@@ -336,3 +343,48 @@ kbd {
 /* Relics held, listed on the pause screen. */
 #overlay .held { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 560px; }
 #overlay .held .chip { font-size: 12px; line-height: 1.3; white-space: normal; }
+
+/* Admin panel (?admin only): a dense testing sheet pinned to the right. */
+#admin {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  width: min(300px, 70vw);
+  overflow-y: auto;
+  padding: 8px 10px 16px;
+  background: #0d0c0aee;
+  border-left: 1px solid var(--edge);
+  font-size: 12px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#admin[hidden] { display: none; }
+#admin header { display: flex; justify-content: space-between; align-items: center; color: var(--moss); letter-spacing: .2em; text-transform: uppercase; }
+#admin header span { display: flex; gap: 4px; letter-spacing: 0; text-transform: none; }
+#admin section { margin-top: 10px; }
+#admin h3 { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+#admin .btns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+#admin button, #admin input {
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 7px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--plate);
+  color: var(--ink);
+}
+#admin button { cursor: pointer; }
+#admin button:hover { border-color: var(--moss); }
+#admin button.on { border-color: var(--moss); background: #1b2414; color: var(--moss); }
+#admin input { width: 70px; }
+#admin .relicRows { display: grid; grid-template-columns: 1fr auto auto auto; gap: 3px 6px; align-items: center; }
+#admin .relicRows b { font-family: var(--num); text-align: right; min-width: 1ch; }
+#admin .relicRows button { padding: 2px 8px; }
+#admin pre { font-family: var(--num); font-size: 10.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-all; color: var(--muted); }
+/* With a mouse there is usually room: the game moves over rather than under. */
+@media (pointer: fine) {
+  body:has(#admin:not([hidden])) { padding-right: 316px; }
+  body:has(#admin:not([hidden])) #app { width: min(960px, calc(100vw - 348px), calc((100vh - 150px) * 960 / 544)); }
+}
