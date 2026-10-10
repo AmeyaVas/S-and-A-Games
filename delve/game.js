@@ -93,12 +93,22 @@
 
   // ---------------------------------------------------------------- save
   const SAVE_KEY = 'delve.save.v1';
-  let save = { deepest: 0, bestTime: 0, kills: 0, diff: 'medium', best: {} };
-  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
-  // Best times are kept per difficulty; runs from before it existed were Medium.
-  if(save.bestTime && !save.best.medium) save.best.medium = save.bestTime;
-  if(!DIFFS[save.diff]) save.diff = 'medium';
-  const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
+  const save = {};
+  function loadSave(){
+    for(const k of Object.keys(save)) delete save[k];
+    Object.assign(save, { deepest: 0, bestTime: 0, kills: 0, diff: 'medium', best: {} });
+    try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
+    // Best times are kept per difficulty; runs from before it existed were Medium.
+    if(save.bestTime && !save.best.medium) save.best.medium = save.bestTime;
+    if(!DIFFS[save.diff]) save.diff = 'medium';
+  }
+  loadSave();
+  // Testing tools. While they are on nothing is saved, and a run they ever
+  // touched never saves either, so records stay honest.
+  const ADMIN_KEY = 'delve.admin';
+  let adminOn = false;
+  try { adminOn = localStorage.getItem(ADMIN_KEY) === '1'; } catch (e) {}
+  const persist = () => { if(adminOn || (run && run.admin)) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
 
   // ---------------------------------------------------------------- input
   const keys = new Set(), pressed = new Set();
@@ -111,7 +121,13 @@
     if(k){ if(!keys.has(k)) pressed.add(k); keys.add(k); if(mode === 'play') e.preventDefault(); }
     if(e.code === 'Escape'){ if(mode === 'play') setMode('pause'); else if(mode === 'pause') setMode('play'); }
     if(mode === 'relic' && /^Digit[123]$/.test(e.code)) chooseRelic(+e.code[5] - 1);
+    if(adminOn && e.code === 'Backquote') toggleAdmin();
+    if(mode === 'title' && !adminOn && e.key && e.key.length === 1){
+      typed = (typed + e.key.toLowerCase()).slice(-5);
+      if(typed === 'admin') unlockAdmin();
+    }
   });
+  let typed = '';
   addEventListener('keyup', e => { const k = KEYMAP[e.code]; if(k) keys.delete(k); });
   addEventListener('blur', () => { keys.clear(); touchKeys.clear(); sticks.left = sticks.right = null; mouse.down = false; if(mode === 'play') setMode('pause'); });
   const toCanvas = e => { const r = canvas.getBoundingClientRect();
@@ -220,7 +236,8 @@
     const tiles = new Uint8Array(W * H);
     const L = { index, def, W, H, tiles, moss: [], lifts: [], beacons: [], sealed: def.boss,
       arena: null, start: [0, 0], canvas: null, lavaTops: [], exitCells: [],
-      pal: PALETTES[Math.max(0, index) % PALETTES.length], signs: (def.signs || []).slice().sort((a, b) => a.x - b.x), stands: [] };
+      pal: PALETTES[Math.max(0, index) % PALETTES.length], signs: (def.signs || []).slice().sort((a, b) => a.x - b.x), stands: [],
+      rolls: { lava: [0, 0], pads: [0, 0], foes: [0, 0], crystals: [0, 0] } };
     foes = []; bullets = []; hostile = []; drops = []; parts = []; frags = []; flashes = []; texts = [];
 
     // J/P groups: J cells cluster by touch; each P joins the nearest cluster.
@@ -234,6 +251,7 @@
           if(rows[ny] && rows[ny][nx] === 'J' && !groupOf.has(k)){ groupOf.set(k, g); q.push([nx, ny]); } } }
     }
     for(const g of groups) g.pad = r() < 0.5;
+    L.rolls.pads = [groups.filter(g => g.pad).length, groups.length];
     const padGroup = (x, y) => { let best = null, bd = 1e9;
       for(const g of groups) for(const [cx, cy] of g.cells){ const d = Math.abs(cx - x) + Math.abs(cy - y); if(d < bd){ bd = d; best = g; } }
       return best; };
@@ -249,17 +267,17 @@
         case '~': t = LAVA; break;
         case 'v': t = VOID; break;
         case 'X': t = EXIT; L.exitCells.push([x, y]); break;
-        case 'L': t = r() < 0.08 ? LAVA : ROCK; break;
+        case 'L': t = r() < 0.08 ? LAVA : ROCK; L.rolls.lava[1]++; if(t === LAVA) L.rolls.lava[0]++; break;
         case 'J': t = groupOf.get(x + ',' + y).pad ? AIR : ROCK; break;
         case 'P': { const g = padGroup(x, y); t = def.tutorial || (g && g.pad) ? PAD : ROCK; break; }
         case 'm': L.moss.push({ x, y, lit: 0 }); break;
         case '@': L.start = [px, py]; break;
         case 'b': L.beacons.push({ x: px, y: py, lit: false }); break;
         case 'h': drops.push({ kind: 'spark', x: px, y: py - 8, vx: 0, vy: 0, t: rand(0, 6), rest: true }); break;
-        case '*': if(r() < 0.55) drops.push({ kind: 'crystal', type: pick(ROLLABLE, r), x: px, y: py - 8, rest: true }); break;
+        case '*': L.rolls.crystals[1]++; if(r() < 0.55 && ++L.rolls.crystals[0]) drops.push({ kind: 'crystal', type: pick(ROLLABLE, r), x: px, y: py - 8, rest: true }); break;
         case '$': drops.push({ kind: 'crystal', type: r() < 0.5 ? 'splitter' : 'ricochet', x: px, y: py - 8, rest: true }); break;
         case 'T': if(rows[y][x - 1] !== 'T') liftTops.push([x, y]); break;
-        case '?': { const k = r() < 0.3 ? null : pick(def.roll.split(''), r); if(k) spawnFoe(k, x, y, rows); break; }
+        case '?': { const k = r() < 0.3 ? null : pick(def.roll.split(''), r); L.rolls.foes[1]++; if(k){ L.rolls.foes[0]++; spawnFoe(k, x, y, rows); } break; }
         default: if(FOES[c]) spawnFoe(c, x, y, rows);
       }
       tiles[i] = t;
@@ -313,7 +331,7 @@
     const forced = new URLSearchParams(location.search).get('seed');
     seed = seed ?? (forced !== null ? (+forced >>> 0) : (Math.random() * 2 ** 32) >>> 0);
     const hp = DIFFS[save.diff].hp;
-    run = { seed, diff: save.diff, depth: 0, hp, maxHp: hp, relics: {}, perm: {}, kills: 0, time: 0,
+    run = { seed, diff: save.diff, admin: adminOn, depth: 0, hp, maxHp: hp, relics: {}, perm: {}, kills: 0, time: 0,
       rng: mulberry(seed ^ 0x51ED) };
     player = null;   // a fresh run carries no powerups over from the last one
     enterDepth(0);
@@ -323,7 +341,7 @@
   // The tutorial is a run of its own: nothing it does reaches the records,
   // and dying there puts you back at the last sign you passed.
   function startTutorial(){
-    run = { seed: 1, diff: 'medium', depth: TUTORIAL, tutorial: true, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
+    run = { seed: 1, diff: 'medium', admin: adminOn, depth: TUTORIAL, tutorial: true, hp: BASE_HP, maxHp: BASE_HP, relics: {}, perm: {}, kills: 0, time: 0,
       rng: mulberry(1), checkpoint: -1, respawn: null };
     player = null;
     enterDepth(TUTORIAL);
@@ -377,8 +395,13 @@
     setMode('play');
   }
 
-  function die(why){
+  function die(why, forced){
     if(mode !== 'play') return;
+    if(admin.god && !forced){
+      // God mode survives pits too: back to the depth's start.
+      Object.assign(player, { x: lvl.start[0] - 6, y: lvl.start[1] - 22, vx: 0, vy: 0, inv: 1, onLift: null });
+      showToast(why + ' — god mode'); return;
+    }
     if(run.tutorial){
       // Back to the last sign passed, healed, with a moment of safety.
       const [x, y] = run.respawn || [lvl.start[0] - 6, lvl.start[1] - 22];
@@ -454,7 +477,7 @@
     if(run.hp > before) floatText(player.x + 6, player.y - 6, '+' + Math.round(run.hp - before), '#7cf0a0'); }
 
   function hurt(n, fromX, why){
-    if(mode !== 'play' || player.inv > 0 || player.dash > 0) return false;
+    if(mode !== 'play' || player.inv > 0 || player.dash > 0 || admin.god) return false;
     if(player.aegis > 0){
       player.aegis--; player.inv = 0.6;
       burst(player.x + 6, player.y + 11, POWERS.aegis.color, 10, 0.6);
@@ -913,7 +936,7 @@
     updatePlayer(dt);
     if(mode !== 'play'){ pressed.clear(); return; }
     updateBullets(dt);
-    updateFoes(dt);
+    if(!admin.freeze) updateFoes(dt);
     updateDrops(dt);
     updateParticles(dt);
     updateMoss(dt);
@@ -931,11 +954,13 @@
 
   let last = performance.now(), acc = 0;
   function frame(now){
+    admin.fps += ((1000 / Math.max(1, now - last)) - admin.fps) * 0.05;
     acc = Math.min(acc + (now - last) / 1000, 0.1); last = now;
     while(acc >= STEP){ step(STEP); acc -= STEP; }
     if(mode !== 'play') updateParticlesIdle(1 / 60);
     render(now / 1000);
     hud();
+    if(adminOn && (admin.tick = (admin.tick + 1) % 10) === 0) refreshAdmin();
     requestAnimationFrame(frame);
   }
   // Out of play the cave keeps breathing: dust and drips, nothing else.
@@ -1364,14 +1389,14 @@
     if(m === 'play'){ overlay.hidden = true; overlay.innerHTML = ''; canvas.focus && canvas.focus(); return; }
     if(m === 'title') html = `<h2>Delve</h2>
       <p>Five cave depths, one life. Follow the glow-moss down, light beacons to heal, take a relic at the bottom of every depth, and break the Warden at the end.</p>
-      ${keysHelp}${diffs}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button></div>`;
+      ${keysHelp}${diffs}${records}<div class="row"><button data-act="begin">Begin descent</button><button class="quiet" data-act="tutorial">Tutorial</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
     else if(m === 'relic') html = `<h2>Depth ${run.depth + 1} cleared</h2><p>Take one relic for the rest of this run.</p>
       <div class="relics">${run.offer.map((k, i) => `<button class="card" data-relic="${i}"><kbd>${i + 1}</kbd><span class="name">${RELICS[k].name}</span><span class="what">${RELICS[k].what}</span>${run.relics[k] ? `<span class="owned">You have ×${run.relics[k]} of ${RELIC_CAP}</span>` : ''}</button>`).join('')}</div>`;
     else if(m === 'pause' && run.tutorial) html = `<h2>Paused</h2><p>Tutorial</p>
-      <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button></div>`;
+      <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="skip">Skip tutorial</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
     else if(m === 'pause') html = `<h2>Paused</h2><p>${DIFFS[run.diff].name} &nbsp; Depth <b>${run.depth + 1}</b> &nbsp; HP <b>${Math.ceil(run.hp)}</b> &nbsp; Time <b>${fmtTime(run.time)}</b></p>
       ${Object.keys(run.relics).length ? `<div class="held">${Object.entries(run.relics).map(([k, n]) => `<span class="chip relic">${RELICS[k].name}${n > 1 ? '<b>×' + n + '</b>' : ''} — ${RELICS[k].what}</span>`).join('')}</div>` : '<p>No relics yet.</p>'}
-      <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button></div>`;
+      <div class="row"><button data-act="resume">Resume</button><button class="quiet" data-act="abandon">Abandon run</button>${adminOn ? '<button class="quiet" data-act="admin">Admin</button>' : ''}</div>`;
     else if(m === 'tutorialDone') html = `<h2 class="good">Ready</h2><p>That's everything. A real run is five depths and one life: no checkpoints, fresh rolls every time, and a relic at the bottom of each depth.</p>
       ${diffs}<div class="row"><button data-act="start">Begin descent</button></div>`;
     else if(m === 'dead') html = `<h2 class="bad">Run over</h2><p>${run.cause || 'The cave keeps you'} on depth <b>${run.depth + 1}</b> after <b>${fmtTime(run.time)}</b>, with <b>${run.kills}</b> kills.</p>
@@ -1404,6 +1429,7 @@
       if(rec){ rec.textContent = best ? fmtTime(best) : '—'; overlay.querySelector('.bestName').textContent = DIFFS[save.diff].name; }
       return;
     }
+    if(b.dataset.act === 'admin'){ toggleAdmin(); return; }
     if(b.dataset.act || b.dataset.relic) goFullscreen();
     if(b.dataset.relic) chooseRelic(+b.dataset.relic);
     const a = b.dataset.act;
@@ -1414,6 +1440,158 @@
     if(a === 'resume') setMode('play');
     if(a === 'abandon'){ save.kills += run.kills - (run.savedKills || 0); run.savedKills = run.kills; persist(); run.cause = 'Abandoned'; setMode('dead'); }
   });
+
+  // ---------------------------------------------------------------- admin
+  // Everything goes through the same functions play uses, so what the panel
+  // does is what the game would do.
+  const admin = { god: false, freeze: false, fps: 60, el: null, info: null, tick: 0 };
+  const FOE_NAMES = { C: 'Crawler', B: 'Bat', S: 'Spitter', R: 'Brute', N: 'Grub nest', W: 'Warden' };
+  const BOSS = DELVE_LEVELS.findIndex(d => d.boss);
+
+  function unlockAdmin(){
+    adminOn = true; typed = ''; titleTaps = [];
+    try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) {}
+    if(run) run.admin = true;
+    if(mode !== 'play') setMode(mode);
+    toggleAdmin();
+  }
+  function lockAdmin(){
+    adminOn = false; admin.god = admin.freeze = false;
+    try { localStorage.removeItem(ADMIN_KEY); } catch (e) {}
+    if(admin.el) admin.el.hidden = true;
+    // Drop whatever admin play did to the records in memory.
+    loadSave();
+    if(mode !== 'play') setMode(mode);
+  }
+  let titleTaps = [];
+  overlay.addEventListener('click', e => {
+    if(mode !== 'title' || adminOn || !e.target.closest('h2')) return;
+    const now = performance.now();
+    titleTaps = titleTaps.filter(t => now - t < 3000).concat(now);
+    if(titleTaps.length >= 5) unlockAdmin();
+  });
+
+  function toggleAdmin(){
+    if(!adminOn) return;
+    if(!admin.el) buildAdmin();
+    admin.el.hidden = !admin.el.hidden;
+    if(!admin.el.hidden) refreshAdmin();
+  }
+
+  function buildAdmin(){
+    const btn = (act, label, arg = '') => `<button data-a="${act}" data-arg="${arg}">${label}</button>`;
+    const el = document.createElement('aside');
+    el.id = 'admin'; el.hidden = true;
+    el.innerHTML = `<header><b>Admin</b><span>${btn('lock', 'Lock admin')}<button data-a="close" aria-label="Close">&times;</button></span></header>
+      <section><h3>Level</h3><div class="btns">${btn('goto', 'Tutorial', TUTORIAL)}${DELVE_LEVELS.map((d, i) => btn('goto', 'Depth ' + (i + 1), i)).join('')}${BOSS >= 0 ? btn('warden', 'Warden') : ''}</div>
+        <div class="btns"><input id="adSeed" inputmode="numeric" placeholder="seed">${btn('seed', 'New run with seed')}</div></section>
+      <section><h3>Powerups</h3><div class="btns">${Object.keys(POWERS).map(k => btn('power', POWERS[k].name, k)).join('')}</div></section>
+      <section><h3>Relics</h3><div class="relicRows">${Object.keys(RELICS).map(k =>
+        `<span>${RELICS[k].name}</span><b data-relic-n="${k}">0</b>${btn('relic', '−', k + ':-1')}${btn('relic', '+', k + ':1')}`).join('')}</div></section>
+      <section><h3>Player</h3><div class="btns">${btn('heal', 'Heal full')}<input id="adHp" inputmode="numeric" placeholder="HP">${btn('sethp', 'Set HP')}</div>
+        <div class="btns">${btn('god', 'God mode')}${btn('exit', 'To the exit')}</div></section>
+      <section><h3>Enemies</h3><div class="btns">${'CBSRN'.split('').map(k => btn('spawn', FOE_NAMES[k], k)).join('')}</div>
+        <div class="btns">${btn('killall', 'Kill on screen')}${btn('freeze', 'Freeze')}</div></section>
+      <section><h3>Run</h3><div class="btns">${Object.keys(DIFFS).map(k => btn('diff', DIFFS[k].name, k)).join('')}</div>
+        <div class="btns">${btn('clear', 'End level now')}${btn('die', 'Die')}</div></section>
+      <section><h3>Live</h3><pre id="adInfo"></pre></section>`;
+    document.body.appendChild(el);
+    admin.el = el; admin.info = el.querySelector('#adInfo');
+    // Keys typed into the panel's boxes are not game input.
+    el.addEventListener('keydown', e => { if(e.target.tagName === 'INPUT' && e.code !== 'Backquote') e.stopPropagation(); });
+    el.addEventListener('click', e => { const b = e.target.closest('button'); if(b) adminAct(b.dataset.a, b.dataset.arg); });
+  }
+
+  // Most actions need a run in progress; from the title they start one.
+  const over = () => !run || mode === 'dead' || mode === 'won';
+  function ensureRun(){ if(over() || run.tutorial) newRun(); }
+  function playing(){ if(mode === 'pause' || mode === 'title') setMode('play'); }
+
+  function adminAct(a, arg){
+    if(a === 'close'){ admin.el.hidden = true; return; }
+    if(a === 'lock'){ lockAdmin(); return; }
+    if(a === 'goto'){
+      if(+arg === TUTORIAL) startTutorial();
+      else { ensureRun(); enterDepth(+arg); setMode('play'); }
+    }
+    if(a === 'warden'){
+      ensureRun(); enterDepth(BOSS); setMode('play');
+      const A = lvl.arena; if(A) Object.assign(player, { x: A.x0 + 24, y: A.y1 - player.h - 1, vx: 0, vy: 0 });
+    }
+    if(a === 'seed'){ const v = $('adSeed').value.trim(); if(v === '' || isNaN(+v)) return; newRun(+v >>> 0); }
+    if(a === 'diff'){ ensureRun(); run.diff = arg;
+      run.maxHp = DIFFS[arg].hp + 25 * (run.relics.hide || 0); run.hp = Math.min(run.hp, run.maxHp); }
+    if(over()) newRun();
+    if(a === 'power'){ playing(); grant(arg); }
+    if(a === 'relic'){
+      const [k, d] = arg.split(':'), n = clamp((run.relics[k] || 0) + +d, 0, RELIC_CAP), was = run.relics[k] || 0;
+      if(n === was) return;
+      if(n) run.relics[k] = n; else delete run.relics[k];
+      if(k === 'hide'){ run.maxHp += 25 * (n - was); run.hp = clamp(run.hp + 25 * (n - was), 1, run.maxHp); }
+    }
+    if(a === 'heal') run.hp = run.maxHp;
+    if(a === 'sethp'){ const v = +$('adHp').value; if(v > 0) run.hp = Math.min(Math.round(v), run.maxHp); }
+    if(a === 'god') admin.god = !admin.god;
+    if(a === 'freeze') admin.freeze = !admin.freeze;
+    if(a === 'exit' && lvl.door){
+      // Stand on the floor beside the doorway, on whichever side is open.
+      const D = lvl.door, y = D.y1 - player.h - 0.5;
+      for(const x of [D.x0 - player.w - 6, D.x1 + 6]){
+        const box = { x, y, w: player.w, h: player.h };
+        if(!solidPx(box.x, box.y) && !solidPx(box.x + box.w, box.y) && !solidPx(box.x, box.y + box.h - 1) && !solidPx(box.x + box.w, box.y + box.h - 1)){
+          playing(); Object.assign(player, { x, y, vx: 0, vy: 0, onLift: null }); break; }
+      }
+    }
+    if(a === 'spawn'){
+      playing();
+      const cx = clamp(Math.floor((player.x + 6) / T) + player.face * 5, 1, lvl.W - 2), cy = Math.floor((player.y + player.h - 1) / T);
+      const f = spawnFoe(arg, cx, arg === 'B' ? cy - 4 : cy, lvl.def.rows);
+      if(f.room !== undefined) f.asleep = false;
+    }
+    if(a === 'killall'){ for(const f of foes) if(!f.dead && f.x + f.w > cam.x && f.x < cam.x + VW && f.y + f.h > cam.y && f.y < cam.y + VH) killFoe(f); }
+    if(a === 'clear'){ playing(); if(lvl.sealed){ const w = foes.find(f => f.type === 'W' && !f.dead); if(w) killFoe(w); lvl.sealed = false; prerender(); } depthCleared(); }
+    if(a === 'die'){ playing(); player.inv = 0; die('Ended from the admin panel', true); }
+    refreshAdmin();
+  }
+
+  function refreshAdmin(){
+    if(!admin.el || admin.el.hidden) return;
+    for(const b of admin.el.querySelectorAll('[data-a=god]')) b.classList.toggle('on', admin.god);
+    for(const b of admin.el.querySelectorAll('[data-a=freeze]')) b.classList.toggle('on', admin.freeze);
+    for(const b of admin.el.querySelectorAll('[data-a=diff]')) b.classList.toggle('on', !!run && run.diff === b.dataset.arg);
+    for(const e of admin.el.querySelectorAll('[data-relic-n]')) e.textContent = run ? (run.relics[e.dataset.relicN] || 0) : 0;
+    const p = player, R = lvl.rolls, n1 = v => Math.round(v);
+    const alive = foes.filter(f => !f.dead), counts = {};
+    for(const f of alive) counts[f.type] = (counts[f.type] || 0) + 1;
+    let near = null, nd = 1e9;
+    if(p) for(const f of alive){ const d = Math.hypot(f.x + f.w / 2 - p.x - 6, f.y + f.h / 2 - p.y - 11); if(d < nd){ nd = d; near = f; } }
+    const w = alive.find(f => f.type === 'W');
+    let raw = '(none)'; try { raw = localStorage.getItem(SAVE_KEY) || '(none)'; } catch(e) {}
+    const lines = [
+      `mode ${mode}   fps ${n1(admin.fps)}`,
+      run ? `seed ${run.seed}   ${DIFFS[run.diff].name}${run.tutorial ? '   tutorial' : ''}` : 'no run',
+      `depth ${lvl.index === TUTORIAL ? 'tutorial' : lvl.index + 1} — ${lvl.def.name}`,
+      run ? `time ${fmtTime(run.time)}   kills ${run.kills}` : '',
+      '',
+      p ? `pos ${n1(p.x)},${n1(p.y)}  tile ${Math.floor((p.x + 6) / T)},${Math.floor((p.y + p.h - 1) / T)}` : '',
+      p ? `vel ${n1(p.vx || 0)},${n1(p.vy || 0)}   ${p.ground ? 'ground' : 'air'}` : '',
+      run ? `hp ${Math.ceil(run.hp)}/${run.maxHp}   inv ${(p.inv || 0).toFixed(2)}` : '',
+      p ? `timers ${Object.entries(p.timers).filter(([, v]) => v > 0).map(([k, v]) => k + ' ' + v.toFixed(1)).join(', ') || '—'}` : '',
+      p ? `aegis ${p.aegis}   blink ${p.blink}` : '',
+      run ? `perm ${Object.entries(run.perm).map(([k, v]) => k + '×' + v).join(', ') || '—'}` : '',
+      run ? `relics ${Object.entries(run.relics).map(([k, v]) => k + '×' + v).join(', ') || '—'}` : '',
+      '',
+      `foes ${alive.length}  ${Object.entries(counts).map(([k, v]) => FOE_NAMES[k] + ' ' + v).join(', ')}`,
+      near ? `nearest ${FOE_NAMES[near.type]} ${n1(nd)}px  hp ${n1(near.hp)}/${n1(near.maxHp)}  ${near.state}${near.asleep ? ' (asleep)' : ''}` : '',
+      w ? `warden hp ${n1(w.hp)}/${n1(w.maxHp)}  phase ${w.phase}  ${w.state}` : '',
+      '',
+      `rolls  lava ${R.lava.join('/')}  pads ${R.pads.join('/')}`,
+      `       foes ${R.foes.join('/')}  crystals ${R.crystals.join('/')}`,
+      '',
+      'save ' + raw,
+    ];
+    admin.info.textContent = lines.join('\n');
+  }
 
   // The title screen shows the first depth behind it, lit by an idle lantern.
   run = null;
