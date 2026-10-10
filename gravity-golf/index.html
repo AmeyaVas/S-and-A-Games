@@ -176,7 +176,7 @@
   <div id="start">
     <div class="card">
       <h2>Gravity <b>Golf</b></h2>
-      <p>Nine holes in three sections: planets pull, then suns burn, then repulsors push.</p>
+      <p>Twelve holes in three sections: planets pull, then suns burn, then repulsors push.</p>
       <div class="row">
         <button id="st-start">Start</button>
         <button class="ghost" id="st-cont" hidden>Continue</button>
@@ -209,6 +209,32 @@ const HOLES = [
   { par:3, tee:{x:90,y:500}, cup:{x:820,y:110}, planets:[
       {x:360,y:330,r:52,type:'planet'},
       {x:640,y:220,r:34,type:'planet'} ] },
+  // thread the needle: the straight line runs through a 56px gap between two equal
+  // planets, where their pulls cancel. It is deliberately tight — the only aces go
+  // through the gap at near-full power, inside a window under a degree wide, and
+  // drifting off the centreline drags you into one of them. Going around either
+  // side is the safe two-putt.
+  { par:3, tee:{x:100,y:520}, cup:{x:800,y:90}, planets:[
+      {x:400,y:250,r:50,type:'planet'},
+      {x:500,y:370,r:50,type:'planet'} ] },
+  // U-turn: a wall of three touching planets runs out from the left edge between
+  // tee and cup, so you shoot away from the cup, round the end of the wall at x=240,
+  // and let its pull swing you back. No shot from the tee sinks — par is two good
+  // putts, the first one around the corner.
+  { par:3, tee:{x:100,y:500}, cup:{x:100,y:100}, planets:[
+      {x:40,y:300,r:40,type:'planet'},
+      {x:120,y:300,r:40,type:'planet'},
+      {x:200,y:300,r:40,type:'planet'} ] },
+  // stepping stones: the big planet sits on the bottom wall (surface at y=592, so no
+  // lane underneath) between tee and cup. The three stones ride an arc 245px out from
+  // its centre, right where a ball skimming over it flies, so they are load bearing:
+  // with them gone the low skim aces from a window ~2.5x as forgiving. Off the straight
+  // line by design, so the audit flags all three.
+  { par:4, tee:{x:80,y:500}, cup:{x:820,y:500}, planets:[
+      {x:450,y:520,r:72,type:'planet'},
+      {x:260,y:383,r:30,type:'planet'},
+      {x:450,y:275,r:30,type:'planet'},
+      {x:640,y:383,r:30,type:'planet'} ] },
 
   // ---- section 2: suns ----
   { par:3, tee:{x:100,y:100}, cup:{x:800,y:500}, planets:[
@@ -292,9 +318,9 @@ const FRICTION = 0.9;      // per second velocity damping (space dust) — sets 
 // half the board without ever reading as dangerous. It now comes out of DISTANCE instead.
 // A sun has a planet's full mass and half its reach.
 //
-// This is not a return to the tuning that killed 91% of shots on hole 3 (full mass at the
+// This is not a return to the tuning that killed 91% of shots on hole 6 (full mass at the
 // full 4.0 reach, back when G was 120000). The taper in accelAt is measured against each
-// body's own reach, so halving the reach also steepens the falloff. Measured on hole 3's
+// body's own reach, so halving the reach also steepens the falloff. Measured on hole 6's
 // r70 sun: pull at 100px goes 148 -> 262 px/s², but at 140px it goes 63 -> 0, and there is
 // nothing at all beyond. Over a 200-shot fan the hole's kill rate FELL, 28.5% -> 17.5% —
 // the wide weak well used to reel in stray shots that were never aimed at it, and that is
@@ -354,6 +380,12 @@ function saveProgress(){
 function loadProgress(){
   try{
     const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    // A save from the 9-hole course: holes 3-5 were inserted into the planets section,
+    // so everything from the old hole 3 on moves up three places.
+    if(d && Array.isArray(d.scores) && d.scores.length === 9){
+      d.scores.splice(2, 0, null, null, null);
+      if((d.reached|0) >= 2) d.reached = (d.reached|0) + 3;
+    }
     if(!d || !Array.isArray(d.scores) || d.scores.length !== HOLES.length) return;
     reached = Math.min(Math.max(d.reached|0, 0), HOLES.length-1);
     scores = d.scores.map(s => (Number.isInteger(s) && s > 0) ? s : null);
@@ -849,12 +881,13 @@ function frame(now){
 // ---------- course audit ----------
 // Since gravity became a finite well, a body further than FIELD_R radii from a hole's
 // tee->cup line exerts nothing on the direct route and reads as scenery — that is how
-// the old layout of hole 5 ended up with two inert planets. A thin margin is the subtler trap:
+// the old layout of hole 8 ended up with two inert planets. A thin margin is the subtler trap:
 // it works today, but any later change to FIELD_R or a radius kills it silently.
 //
-// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Two
-// standing exceptions: hole 7's planet sits 183px out against a 184px reach, yet the hole
-// plays fine because the real route curves out around the repulsor first; and hole 9's sun
+// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Three
+// standing exceptions: hole 5's stones arc over a planet that blocks the straight line,
+// so the line they are measured against is one no ball can take; hole 10's planet sits 183px out against a 184px reach, yet the hole
+// plays fine because the real route curves out around the repulsor first; and hole 12's sun
 // reports no pull on the direct line by design — its job is to close the bottom lane, which
 // is off the direct route, and the planet stacked above it covers the line itself.
 const AUDIT_THIN = 20;              // px of margin below which a body is worth a look
