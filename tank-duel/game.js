@@ -134,6 +134,7 @@
      cap, which it is once strength is turned right down. */
   function newWind() {
     if (!cfg.windOn) { wind = 0; return; }
+    if (admin.freezeWind) return;
     let next = wind + (Math.random() * 2 - 1) * cfg.windStep;
     for (let i = 0; i < 4 && Math.abs(next) > cfg.windMax; i++) {
       next = (next > 0 ? 2 : -2) * cfg.windMax - next;
@@ -212,7 +213,7 @@
 
     for (const t of tanks) {
       const d = Math.hypot(x - t.x, y - (t.y - 10));
-      if (d < HURT_R) {
+      if (d < HURT_R && !admin.god[tanks.indexOf(t)]) {
         let dmg = MAX_DMG * (1 - d / HURT_R);
         if (direct && d < DIRECT_R) dmg += DIRECT_DMG;
         t.hp = Math.max(0, Math.round(t.hp - dmg));
@@ -260,6 +261,8 @@
   const AIM_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ']);
 
   addEventListener('keydown', e => {
+    // Typing into the testing panel is not play.
+    if (e.target.closest && e.target.closest('#admin')) return;
     /* While the panel is open the sliders own the arrow keys and Space, so
        stealing either here would leave the controls unusable. */
     if (settingsOpen()) {
@@ -433,6 +436,8 @@
       ctx.fill();
     }
 
+    if (admin.preview && phase === 'aim') drawPreview();
+
     puffs = puffs.filter(p => p.life > 0);
     for (const p of puffs) {
       p.r += 3.4;
@@ -495,8 +500,198 @@
     if (phase === 'fly' && shell) stepShell();
     if (phase === 'aim') syncHud();
     draw();
+    if (adminOn && (admin.tick = (admin.tick + 1) % 10) === 0) refreshAdmin();
     requestAnimationFrame(frame);
   }
+
+  // ---- testing tools ---------------------------------------------------
+
+  const ADMIN_KEY = 'tankduel.admin';
+  let adminOn = false;
+  try { adminOn = localStorage.getItem(ADMIN_KEY) === '1'; } catch (_) { /* stays off */ }
+  const admin = { god: [false, false], freezeWind: false, preview: false, el: null, info: null, btn: null, tick: 0 };
+
+  let typed = '';
+  addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('#admin, #settings')) return;
+    if (adminOn && e.code === 'Backquote') { toggleAdmin(); return; }
+    if (!adminOn && /^[a-z]$/i.test(e.key)) {
+      typed = (typed + e.key.toLowerCase()).slice(-5);
+      if (typed === 'admin') unlockAdmin();
+    }
+  });
+  let titleTaps = [];
+  document.querySelector('h1').addEventListener('click', () => {
+    if (adminOn) return;
+    const now = performance.now();
+    titleTaps = titleTaps.filter(t => now - t < 3000).concat(now);
+    if (titleTaps.length >= 5) unlockAdmin();
+  });
+
+  function unlockAdmin() {
+    adminOn = true; typed = ''; titleTaps = [];
+    try { localStorage.setItem(ADMIN_KEY, '1'); } catch (_) { /* this visit only */ }
+    showAdminButton();
+    toggleAdmin();
+  }
+  function lockAdmin() {
+    adminOn = false;
+    Object.assign(admin, { god: [false, false], freezeWind: false, preview: false });
+    try { localStorage.removeItem(ADMIN_KEY); } catch (_) { /* nothing stored */ }
+    if (admin.el) admin.el.hidden = true;
+    if (admin.btn) admin.btn.hidden = true;
+  }
+  // Phones have no backtick, so the wind line gets a button while unlocked.
+  function showAdminButton() {
+    if (!admin.btn) {
+      admin.btn = document.createElement('button');
+      admin.btn.id = 'openAdmin';
+      admin.btn.type = 'button';
+      admin.btn.textContent = 'Admin';
+      admin.btn.addEventListener('click', toggleAdmin);
+      document.getElementById('openSettings').after(admin.btn);
+    }
+    admin.btn.hidden = false;
+  }
+  function toggleAdmin() {
+    if (!adminOn) return;
+    if (!admin.el) buildAdmin();
+    admin.el.hidden = !admin.el.hidden;
+    held.clear();
+    refreshAdmin();
+  }
+
+  function buildAdmin() {
+    const btn = (act, label, arg = '') => `<button type="button" data-a="${act}" data-arg="${arg}">${label}</button>`;
+    const el = document.createElement('aside');
+    el.id = 'admin'; el.hidden = true;
+    el.innerHTML = `<header><b>Admin</b><span>${btn('lock', 'Lock admin')}<button type="button" data-a="close" aria-label="Close">&times;</button></span></header>
+      <section><h3>Tanks</h3>
+        ${[0, 1].map(i => `<div class="btns"><span class="who p${i + 1}">P${i + 1}</span>${btn('heal', 'Heal', i)}<input id="adHp${i}" inputmode="numeric" placeholder="hp">${btn('sethp', 'Set', i)}${btn('god', 'No damage', i)}</div>`).join('')}
+        <div class="btns">${btn('swap', 'Switch turn')}${btn('move', '◀ Move', -20)}${btn('move', 'Move ▶', 20)}</div></section>
+      <section><h3>Aim</h3>
+        <div class="btns">${btn('preview', 'Show path')}${btn('aimpow', 'Power to hit')}${btn('aimbest', 'Best shot')}</div></section>
+      <section><h3>Wind</h3>
+        <div class="btns"><input id="adWind" inputmode="numeric" placeholder="-25…25">${btn('setwind', 'Set')}${btn('calm', 'Calm')}${btn('freeze', 'Freeze')}</div></section>
+      <section><h3>Ground</h3>
+        <div class="btns">${btn('terrain', 'New terrain')}${btn('flat', 'Flatten')}</div></section>
+      <section><h3>Result</h3>
+        <div class="btns">${btn('win', 'P1 wins', 0)}${btn('win', 'P2 wins', 1)}${btn('draw', 'Draw')}${btn('new', 'New match')}</div></section>
+      <section><h3>Live</h3><pre id="adInfo"></pre></section>`;
+    document.body.appendChild(el);
+    admin.el = el; admin.info = el.querySelector('#adInfo');
+    // A panel button lets go of focus once pressed, or the next Space would
+    // press it again instead of firing.
+    el.addEventListener('click', e => { const b = e.target.closest('button'); if (b) { b.blur(); adminAct(b.dataset.a, b.dataset.arg); } });
+  }
+
+  /* The shell's flight without firing it: the same steps stepShell takes,
+     against the current ground and wind. Ends on the ground, a tank or the
+     side of the field. */
+  function simulate(t, angle, power, keepPath) {
+    const rad = angle * Math.PI / 180, v = power * SPEED;
+    const tip = { x: t.x + Math.cos(rad) * 24, y: t.y - 11 - Math.sin(rad) * 24 };
+    let x = tip.x, y = tip.y, vx = Math.cos(rad) * v, vy = -Math.sin(rad) * v;
+    const path = keepPath ? [{ x, y }] : null;
+    for (let n = 0; n < 3000; n++) {
+      for (let s = 0; s < SUBSTEPS; s++) {
+        vy += GRAVITY / SUBSTEPS; vx += wind * WIND_ACC / SUBSTEPS;
+        x += vx / SUBSTEPS; y += vy / SUBSTEPS;
+        if (x < -40 || x > W + 40) return { x, y, out: true, path };
+        for (const k of tanks) if (Math.hypot(x - k.x, y - (k.y - 10)) < DIRECT_R) return { x, y, tank: k, path };
+        if (y >= groundAt(x)) return { x, y, path };
+      }
+      if (path) path.push({ x, y });
+    }
+    return { x, y, out: true, path };
+  }
+  const missBy = (r, foe) => r.tank === foe ? 0 : r.out ? 1e6 : Math.hypot(r.x - foe.x, r.y - (foe.y - 10));
+
+  function drawPreview() {
+    const t = tanks[turn];
+    const r = simulate(t, t.angle, t.power, true);
+    ctx.save();
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    r.path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    ctx.lineTo(r.x, r.y);
+    ctx.strokeStyle = 'rgba(255,217,138,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (!r.out) { ctx.setLineDash([]); ctx.beginPath(); ctx.arc(r.x, r.y, BLAST_R, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(240,165,44,0.5)'; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function adminAct(a, arg) {
+    if (a === 'close') { admin.el.hidden = true; return; }
+    if (a === 'lock') { lockAdmin(); return; }
+    if (a === 'new') { reset(); refreshAdmin(); return; }
+    const t = tanks[turn], foe = tanks[1 - turn], i = +arg;
+    if (a === 'god') admin.god[i] = !admin.god[i];
+    if (a === 'preview') admin.preview = !admin.preview;
+    if (a === 'freeze') admin.freezeWind = !admin.freezeWind;
+    if (phase === 'over' && a !== 'god' && a !== 'preview' && a !== 'freeze') { refreshAdmin(); return; }
+    if (a === 'heal') tanks[i].hp = 100;
+    if (a === 'sethp') {
+      const v = Math.round(+document.getElementById('adHp' + i).value);
+      if (Number.isFinite(v) && v > 0) tanks[i].hp = Math.min(100, v);
+    }
+    if (a === 'swap' && phase === 'aim') { turn = 1 - turn; }
+    if (a === 'move') {
+      t.x = Math.max(20, Math.min(W - 20, t.x + i));
+      t.y = groundAt(t.x);
+    }
+    if (a === 'setwind' && cfg.windOn) {
+      const v = Math.round(+document.getElementById('adWind').value);
+      if (Number.isFinite(v)) wind = Math.max(-25, Math.min(25, v));
+    }
+    if (a === 'calm') wind = 0;
+    // Search the power for this angle, or every angle and power, for the
+    // shot that lands closest to the other tank.
+    if ((a === 'aimpow' || a === 'aimbest') && phase === 'aim') {
+      let best = null;
+      const angles = a === 'aimpow' ? [t.angle] : Array.from({ length: ANGLE_MAX - ANGLE_MIN + 1 }, (_, k) => ANGLE_MIN + k);
+      for (const ang of angles) for (let pw = POWER_MIN; pw <= POWER_MAX; pw += 0.5) {
+        const d = missBy(simulate(t, ang, pw), foe);
+        if (!best || d < best.d) best = { d, ang, pw };
+      }
+      if (best) { t.angle = best.ang; t.power = best.pw; }
+    }
+    if (a === 'terrain' || a === 'flat') {
+      if (a === 'terrain') makeGround();
+      else { const y = H * 0.72; ground.fill(y); }
+      for (const k of tanks) k.y = groundAt(k.x);
+    }
+    if (a === 'win' || a === 'draw') {
+      shell = null;
+      if (a === 'win') tanks[1 - i].hp = 0; else tanks[0].hp = tanks[1].hp = 0;
+      phase = 'over';
+      showOver(a === 'win' ? tanks[i] : null);
+    }
+    syncHud();
+    refreshAdmin();
+  }
+
+  function refreshAdmin() {
+    if (!admin.el || admin.el.hidden) return;
+    const on = (sel, v) => { for (const b of admin.el.querySelectorAll(sel)) b.classList.toggle('on', v(b)); };
+    on('[data-a=god]', b => admin.god[+b.dataset.arg]);
+    on('[data-a=preview]', () => admin.preview);
+    on('[data-a=freeze]', () => admin.freezeWind);
+    const t = tanks[turn], foe = tanks[1 - turn];
+    const shot = phase === 'aim' ? simulate(t, t.angle, t.power) : null;
+    admin.info.textContent = [
+      `phase ${phase}   turn ${t.name}`,
+      `wind ${wind}${cfg.windOn ? '' : ' (off)'}   max ${cfg.windMax} step ${cfg.windStep}${admin.freezeWind ? '   frozen' : ''}`,
+      '',
+      ...tanks.map((k, n) => `P${n + 1} hp ${k.hp}${admin.god[n] ? ' (no damage)' : ''}  x ${Math.round(k.x)} y ${Math.round(k.y)}  ${Math.round(k.angle)}° pw ${Math.round(k.power)}`),
+      '',
+      shot ? `this shot lands x ${Math.round(shot.x)}${shot.out ? ' (off field)' : shot.tank ? ' — direct hit on ' + shot.tank.name : `, ${Math.round(missBy(shot, foe))}px from ${foe.name}`}` : '',
+      shell ? `shell x ${Math.round(shell.x)} y ${Math.round(shell.y)}  v ${shell.vx.toFixed(1)},${shell.vy.toFixed(1)}` : '',
+    ].join('\n');
+  }
+
+  if (adminOn) showAdminButton();
 
   reset();
   frame();
