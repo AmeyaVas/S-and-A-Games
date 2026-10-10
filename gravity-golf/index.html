@@ -180,7 +180,7 @@
   <div id="start">
     <div class="card">
       <h2>Gravity <b>Golf</b></h2>
-      <p>Twelve holes in three sections: planets pull, then suns burn, then repulsors push.</p>
+      <p>Fourteen holes in three sections: planets pull, then suns burn, then repulsors push.</p>
       <div class="row">
         <button id="st-start">Start</button>
         <button class="ghost" id="st-cont" hidden>Continue</button>
@@ -243,6 +243,12 @@ const HOLES = [
   // ---- section 2: suns ----
   { par:3, tee:{x:100,y:100}, cup:{x:800,y:500}, planets:[
       {x:450,y:300,r:70,type:'sun'} ] },
+  // hot cup: the cup sits right behind the sun, its centre 21px off the surface, so
+  // the straight line is blocked and every route in skims the sun's edge. Aces only
+  // come from curling around it. Putting back from the far side, the sun is behind
+  // the cup: a soft-to-medium putt drops, anything firmer rolls through and burns.
+  { par:3, tee:{x:100,y:300}, cup:{x:641,y:300}, planets:[
+      {x:560,y:300,r:60,type:'sun'} ] },
   { par:4, tee:{x:80,y:520}, cup:{x:830,y:80}, planets:[
       {x:300,y:360,r:44,type:'planet'},
       {x:480,y:250,r:38,type:'sun'},
@@ -255,6 +261,20 @@ const HOLES = [
       {x:280,y:320,r:44,type:'planet'},
       {x:450,y:180,r:46,type:'sun'},
       {x:640,y:60,r:38,type:'planet'} ] },
+  // lay-up: two walls of suns cross the board, each with one gap — the first at the
+  // top, the second at the bottom — and the wells between neighbours overlap, so
+  // there is no lane along either wall. A full-power shot through the first gap
+  // carries into the second wall and burns. The way through is to stop in the pocket
+  // between them, then go again: three good shots, no hero shot.
+  { par:4, tee:{x:80,y:150}, cup:{x:820,y:450}, planets:[
+      {x:300,y:0,r:40,type:'sun'},
+      {x:300,y:250,r:60,type:'sun'},
+      {x:300,y:400,r:60,type:'sun'},
+      {x:300,y:550,r:60,type:'sun'},
+      {x:600,y:40,r:60,type:'sun'},
+      {x:600,y:190,r:60,type:'sun'},
+      {x:600,y:340,r:60,type:'sun'},
+      {x:600,y:600,r:40,type:'sun'} ] },
 
   // ---- section 3: repulsors ----
   // repulsor introduction: the planet blocks the straight line, and the repulsor
@@ -384,11 +404,21 @@ function saveProgress(){
 function loadProgress(){
   try{
     const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    // A save from the 9-hole course: holes 3-5 were inserted into the planets section,
-    // so everything from the old hole 3 on moves up three places.
-    if(d && Array.isArray(d.scores) && d.scores.length === 9){
-      d.scores.splice(2, 0, null, null, null);
-      if((d.reached|0) >= 2) d.reached = (d.reached|0) + 3;
+    // Saves from earlier, shorter courses. Scores are stored by index, so each time
+    // holes were inserted the old entries move up past them. The steps chain, so a
+    // 9-hole save passes through the 12-hole step on its way to the current course.
+    if(d && Array.isArray(d.scores)){
+      if(d.scores.length === 9){           // 9 -> 12: holes 3-5 joined the planets
+        const at = d.reached|0;
+        d.scores.splice(2, 0, null, null, null);
+        d.reached = at >= 2 ? at + 3 : at;
+      }
+      if(d.scores.length === 12){          // 12 -> 14: hot cup (7) and lay-up (10)
+        const at = d.reached|0;
+        d.scores.splice(6, 0, null);
+        d.scores.splice(9, 0, null);
+        d.reached = at >= 8 ? at + 2 : at >= 6 ? at + 1 : at;
+      }
     }
     if(!d || !Array.isArray(d.scores) || d.scores.length !== HOLES.length) return;
     reached = Math.min(Math.max(d.reached|0, 0), HOLES.length-1);
@@ -885,15 +915,17 @@ function frame(now){
 // ---------- course audit ----------
 // Since gravity became a finite well, a body further than FIELD_R radii from a hole's
 // tee->cup line exerts nothing on the direct route and reads as scenery — that is how
-// the old layout of hole 8 ended up with two inert planets. A thin margin is the subtler trap:
+// the old layout of hole 9 ended up with two inert planets. A thin margin is the subtler trap:
 // it works today, but any later change to FIELD_R or a radius kills it silently.
 //
-// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Three
+// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Four
 // standing exceptions: hole 5's stones arc over a planet that blocks the straight line,
-// so the line they are measured against is one no ball can take; hole 10's planet sits 183px out against a 184px reach, yet the hole
-// plays fine because the real route curves out around the repulsor first; and hole 12's sun
-// reports no pull on the direct line by design — its job is to close the bottom lane, which
-// is off the direct route, and the planet stacked above it covers the line itself.
+// so the line they are measured against is one no ball can take; hole 10's suns are two
+// walls whose job is to close every lane, most of them far off the line; hole 12's planet sits
+// 183px out against a 184px reach, yet the hole plays fine because the real route
+// curves out around the repulsor first; and hole 14's sun reports no pull on the direct
+// line by design — its job is to close the bottom lane, which is off the direct route,
+// and the planet stacked above it covers the line itself.
 const AUDIT_THIN = 20;              // px of margin below which a body is worth a look
 function auditCourse(){
   const rows = [];
