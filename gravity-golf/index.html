@@ -180,7 +180,7 @@
   <div id="start">
     <div class="card">
       <h2>Gravity <b>Golf</b></h2>
-      <p>Fourteen holes in three sections: planets pull, then suns burn, then repulsors push.</p>
+      <p>Fifteen holes in three sections: planets pull, then suns burn, then repulsors push.</p>
       <div class="row">
         <button id="st-start">Start</button>
         <button class="ghost" id="st-cont" hidden>Continue</button>
@@ -282,6 +282,18 @@ const HOLES = [
   { par:4, tee:{x:100,y:500}, cup:{x:830,y:110}, planets:[
       {x:380,y:330,r:46,type:'planet'},
       {x:700,y:220,r:40,type:'repulsor'} ] },
+  // bumper: a wall of three suns runs out from the left edge between tee and cup,
+  // and the cup sits right above the tee on the far side of it. Nothing turns the ball
+  // back round the wall's end except the repulsor beyond it: aim up-right past the
+  // end and its push kicks you back over into the cup. It is load bearing — without
+  // it the aces all but vanish (0.17% of a tee fan -> 0.01%). The price is that it
+  // pushes toward the suns, so a shot that comes in too close to it gets shoved into
+  // the wall.
+  { par:3, tee:{x:220,y:440}, cup:{x:220,y:160}, planets:[
+      {x:50,y:300,r:50,type:'sun'},
+      {x:160,y:300,r:50,type:'sun'},
+      {x:270,y:300,r:50,type:'sun'},
+      {x:470,y:300,r:36,type:'repulsor'} ] },
   // repulsor gate: the repulsor sits straight above the tee, so firing up the middle
   // shoves you off line. The planet up-right pulls you back toward the cup.
   { par:3, tee:{x:450,y:545}, cup:{x:430,y:80}, planets:[
@@ -418,6 +430,11 @@ function loadProgress(){
         d.scores.splice(6, 0, null);
         d.scores.splice(9, 0, null);
         d.reached = at >= 8 ? at + 2 : at >= 6 ? at + 1 : at;
+      }
+      if(d.scores.length === 14){          // 14 -> 15: bumper (12)
+        const at = d.reached|0;
+        d.scores.splice(11, 0, null);
+        d.reached = at >= 11 ? at + 1 : at;
       }
     }
     if(!d || !Array.isArray(d.scores) || d.scores.length !== HOLES.length) return;
@@ -918,14 +935,15 @@ function frame(now){
 // the old layout of hole 9 ended up with two inert planets. A thin margin is the subtler trap:
 // it works today, but any later change to FIELD_R or a radius kills it silently.
 //
-// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Four
+// This measures the STRAIGHT line only, so treat it as a smell, not a verdict. Five
 // standing exceptions: hole 5's stones arc over a planet that blocks the straight line,
 // so the line they are measured against is one no ball can take; hole 10's suns are two
-// walls whose job is to close every lane, most of them far off the line; hole 12's planet sits
-// 183px out against a 184px reach, yet the hole plays fine because the real route
-// curves out around the repulsor first; and hole 14's sun reports no pull on the direct
-// line by design — its job is to close the bottom lane, which is off the direct route,
-// and the planet stacked above it covers the line itself.
+// walls whose job is to close every lane, most of them far off the line; hole 12's wall
+// blocks the line, so its far sun and the repulsor sit on a route no straight shot takes;
+// hole 13's planet sits 183px out against a 184px reach, yet the hole plays fine
+// because the real route curves out around the repulsor first; and hole 15's sun
+// reports no pull on the direct line by design — its job is to close the bottom lane,
+// which is off the direct route, and the planet stacked above it covers the line itself.
 const AUDIT_THIN = 20;              // px of margin below which a body is worth a look
 function auditCourse(){
   const rows = [];

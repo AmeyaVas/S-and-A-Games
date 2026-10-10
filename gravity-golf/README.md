@@ -15,7 +15,7 @@ double-click `index.html` to play in any browser.
   losing the stroke.
 - **Repulsors** (purple) push the ball away instead of pulling.
 - Get the ball into the cup moving slowly enough and it drops. Fewest strokes wins.
-- 14 hand-made holes, par tracked against the field.
+- 15 hand-made holes, par tracked against the field.
 
 ## The three sections
 
@@ -27,7 +27,7 @@ sun and a repulsor sits with the repulsors.
 |---|---|---|
 | **Planets** | pull only | 1-5 |
 | **Suns** | a sun on the board | 6-10 |
-| **Repulsors** | a repulsor on the board | 11-14 |
+| **Repulsors** | a repulsor on the board | 11-15 |
 
 Sink the last hole of a section and the card tells you which hazard is coming next.
 The grouping is derived from each hole's bodies (`holeSection` in `index.html`) — only
@@ -82,11 +82,12 @@ out of reach — or within `AUDIT_THIN` px of it — is flagged in the console o
 under `#debug`. Run it after editing `HOLES`.
 
 It measures the *straight* line only, so read it as a smell rather than a verdict.
-Hole 12 is the standing example: its planet is 183px out against a 184px reach and
+Hole 13 is the standing example: its planet is 183px out against a 184px reach and
 gets flagged, but the hole plays fine, because the real route curves around the
 repulsor before reaching it. Hole 5's stones are flagged the same way: they arc over a planet
 that blocks the straight line, so they sit off a route no ball can take. Hole 10's suns are
 flagged too: they are two walls built to close every lane, so most sit far off the line.
+Hole 12's far sun and repulsor likewise sit on the bumper route, not the blocked line.
 
 `gg.sim()` steps the physics directly instead of waiting on animation frames,
 so it is the quick way to test a shot from the console. It stops early if the
