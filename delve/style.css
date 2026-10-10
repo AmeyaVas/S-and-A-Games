@@ -260,7 +260,10 @@ kbd {
   /* The side padding clears the notch and the home bar when the page runs
      edge to edge (viewport-fit=cover). */
   body { padding: 8px max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left)); gap: 8px; align-items: flex-start; }
-  .back { position: static; flex: none; }
+  .back { position: static; flex: none; white-space: nowrap; }
+  /* A blank twin of the back link on the right keeps the game centred. It
+     gives way first when the screen is too narrow for both. */
+  body::after { content: ''; flex: 0 1000 107px; }
   #app { width: auto; flex: 0 1 calc((100vh - 48px) * 960 / 544); flex-basis: calc((100dvh - 48px - env(safe-area-inset-bottom)) * 960 / 544); min-width: 0; gap: 4px; }
   #overlay { overflow-y: auto; justify-content: safe center; }
 
@@ -293,6 +296,9 @@ kbd {
   #overlay { gap: 6px; padding: 10px; }
   #overlay h2 { font-size: 24px; }
   #overlay p { font-size: 13px; }
+  /* The sticks are labelled on screen and the tutorial teaches them, so the
+     title spends its little height on the game, not the controls. */
+  #overlay .keys { display: none; }
 }
 
 @media (pointer: coarse) and (orientation: portrait) {
@@ -315,7 +321,7 @@ kbd {
 /* Fullscreen on a phone: the back link goes (leaving fullscreen is the way
    out) and the game takes the whole screen less the HUD. */
 :fullscreen body { padding: 4px; }
-:fullscreen .back { display: none; }
+:fullscreen .back, :fullscreen body::after { display: none; }
 :fullscreen #app { flex: 0 1 calc((100vh - 36px) * 960 / 544); }
 
 /* Difficulty: one segmented row, the chosen one lit. */
