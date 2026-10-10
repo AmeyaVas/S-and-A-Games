@@ -933,3 +933,49 @@ select:disabled { opacity: 0.4; }
   .topbtns { gap: 6px; width: 100%; margin-left: 0; }
   .topbtns button { min-width: 0; flex: 1; padding: 6px; letter-spacing: 1px; }
 }
+
+/* Testing tools: an engraved sheet pinned to the right. */
+#btnAdmin[hidden] { display: none; }
+
+#admin {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(310px, 72vw);
+  overflow-y: auto;
+  padding: 8px 10px 16px;
+  background: #0b1118f2;
+  border-left: 1px solid var(--edge);
+  color: var(--text);
+  font-size: 12px;
+}
+#admin[hidden] { display: none; }
+#admin header { display: flex; justify-content: space-between; align-items: center; font-family: var(--display); color: var(--gold); letter-spacing: 3px; text-transform: uppercase; }
+#admin header span { display: flex; gap: 4px; letter-spacing: 0; text-transform: none; }
+#admin section { margin-top: 10px; }
+#admin h3 { margin: 0 0 4px; font-family: var(--display); font-size: 11px; font-weight: normal; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+#admin .btns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+#admin .note { margin: 0 0 4px; color: var(--muted); }
+#admin button, #admin input, #admin select {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 7px;
+  min-width: 0;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  background: var(--plate);
+  color: var(--text);
+  clip-path: none;
+}
+#admin button { cursor: pointer; }
+#admin button:hover { border-color: var(--gold); }
+#admin button.on { border-color: var(--gold); background: #2a2414; color: var(--gold-hi); }
+#admin input { width: 64px; }
+#admin select { max-width: 150px; }
+#admin pre { margin: 0; font-family: var(--num); font-size: 10.5px; line-height: 1.45; white-space: pre-wrap; color: var(--muted); }
+
+@media (pointer: fine) {
+  body:has(#admin:not([hidden])) #app { margin-right: 310px; }
+}
