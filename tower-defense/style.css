@@ -322,7 +322,9 @@ body { touch-action: manipulation; }
   #game-area { flex: none; }
   #canvas { width: auto; height: calc(100vh - 8px); }
   #sidebar { width: auto; flex: 1; min-width: 0; max-height: calc(100vh - 8px); overflow-y: auto; padding: 38px 10px 10px; }
-  #sidebar h1, #hint { display: none; }
+  /* The title stays, small, on one line under the back link. */
+  #sidebar h1 { flex: none; margin: 0 0 4px; font-size: 14px; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #hint { display: none; }
   #sidebar h2 { margin: 10px 0 6px; }
   .stat-row { padding: 2px 0; font-size: 14px; }
   #start-wave-btn { margin: 6px 0 2px; padding: 8px; font-size: 15px; }
@@ -349,4 +351,60 @@ body { touch-action: manipulation; }
     border-radius: 3px;
     box-shadow: inset 0 0 0 1px #f0d77a;
   }
+}
+
+/* Testing tools: a parchment-on-wood sheet pinned to the right. */
+#admin-btn {
+  width: 100%;
+  margin: 4px 0;
+  padding: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  border: 2px solid #1c1712;
+  border-radius: 3px;
+  background: #3a2a1a;
+  color: #d4af37;
+}
+#admin-btn[hidden] { display: none; }
+
+#admin {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  width: min(300px, 70vw);
+  overflow-y: auto;
+  padding: 8px 10px 16px;
+  background: #1c1712f2;
+  border-left: 2px solid #4a3524;
+  font-size: 12px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#admin[hidden] { display: none; }
+#admin header { display: flex; justify-content: space-between; align-items: center; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; }
+#admin header span { display: flex; gap: 4px; letter-spacing: 0; text-transform: none; }
+#admin section { margin-top: 10px; }
+#admin h3 { margin: 0 0 4px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #b89a6b; }
+#admin .btns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+#admin button, #admin input {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 7px;
+  border: 1px solid #4a3524;
+  border-radius: 3px;
+  background: #2a1f16;
+  color: #e8d9b5;
+}
+#admin button { cursor: pointer; }
+#admin button:hover { border-color: #d4af37; }
+#admin button.on { border-color: #d4af37; background: #4a3a14; color: #ffd23f; }
+#admin input { width: 64px; }
+#admin pre { margin: 0; font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; color: #b89a6b; }
+
+/* With a mouse there is usually room: the game moves over rather than under. */
+@media (pointer: fine) {
+  body:has(#admin:not([hidden])) { padding-right: 300px; }
 }

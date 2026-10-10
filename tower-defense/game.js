@@ -791,7 +791,7 @@
       for (const enemy of state.enemies) {
         if (enemy.dead || enemy.reachedBase) continue;
         enemy.update(dt);
-        if (enemy.reachedBase) {
+        if (enemy.reachedBase && !admin.god) {
           state.lives--;
         }
       }
@@ -1020,12 +1020,169 @@
     state.lastTime = timestamp;
     dt = Math.min(dt, 0.05); // clamp to avoid huge jumps on tab-switch
 
-    if (state.phase !== 'gameover' && state.phase !== 'win') {
-      update(dt);
+    if (state.phase !== 'gameover' && state.phase !== 'win' && !admin.paused) {
+      for (let i = 0; i < admin.speed; i++) update(dt);
     }
     draw();
+    if (adminOn && (admin.tick = (admin.tick + 1) % 10) === 0) refreshAdmin();
     requestAnimationFrame(loop);
   }
+
+  // ---------- Testing tools ----------
+  const ADMIN_KEY = 'castle.admin';
+  let adminOn = false;
+  try { adminOn = localStorage.getItem(ADMIN_KEY) === '1'; } catch (e) {}
+  const admin = { god: false, paused: false, speed: 1, el: null, info: null, btn: null, tick: 0 };
+
+  let typed = '';
+  addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (adminOn && e.code === 'Backquote') { toggleAdmin(); return; }
+    if (!adminOn && /^[a-z]$/i.test(e.key)) {
+      typed = (typed + e.key.toLowerCase()).slice(-5);
+      if (typed === 'admin') unlockAdmin();
+    }
+  });
+  let titleTaps = [];
+  document.querySelector('#sidebar h1').addEventListener('click', () => {
+    if (adminOn) return;
+    const now = performance.now();
+    titleTaps = titleTaps.filter(t => now - t < 3000).concat(now);
+    if (titleTaps.length >= 5) unlockAdmin();
+  });
+
+  function unlockAdmin() {
+    adminOn = true; typed = ''; titleTaps = [];
+    try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) {}
+    showAdminButton();
+    toggleAdmin();
+  }
+  function lockAdmin() {
+    adminOn = false;
+    Object.assign(admin, { god: false, paused: false, speed: 1 });
+    try { localStorage.removeItem(ADMIN_KEY); } catch (e) {}
+    if (admin.el) admin.el.hidden = true;
+    if (admin.btn) admin.btn.hidden = true;
+  }
+  // Phones have no backtick, so the sidebar gets a button while unlocked.
+  function showAdminButton() {
+    if (!admin.btn) {
+      admin.btn = document.createElement('button');
+      admin.btn.id = 'admin-btn';
+      admin.btn.textContent = 'Admin';
+      admin.btn.addEventListener('click', toggleAdmin);
+      startWaveBtn.after(admin.btn);
+    }
+    admin.btn.hidden = false;
+  }
+
+  function toggleAdmin() {
+    if (!adminOn) return;
+    if (!admin.el) buildAdmin();
+    admin.el.hidden = !admin.el.hidden;
+    refreshAdmin();
+  }
+
+  function buildAdmin() {
+    const btn = (act, label, arg = '') => `<button data-a="${act}" data-arg="${arg}">${label}</button>`;
+    const el = document.createElement('aside');
+    el.id = 'admin'; el.hidden = true;
+    el.innerHTML = `<header><b>Admin</b><span>${btn('lock', 'Lock admin')}<button data-a="close" aria-label="Close">&times;</button></span></header>
+      <section><h3>Waves</h3>
+        <div class="btns"><input id="ad-wave" inputmode="numeric" placeholder="wave">${btn('wave', 'Go to wave')}${btn('boss', 'Next boss wave')}</div>
+        <div class="btns">${btn('finish', 'Finish this wave')}${btn('killall', 'Kill all')}</div></section>
+      <section><h3>Speed</h3><div class="btns">${btn('pause', 'Pause')}${[1, 2, 4, 8].map(n => btn('speed', n + '×', n)).join('')}</div></section>
+      <section><h3>Gold &amp; lives</h3>
+        <div class="btns">${btn('gold', '+100g', 100)}${btn('gold', '+1000g', 1000)}<input id="ad-gold" inputmode="numeric" placeholder="gold">${btn('setgold', 'Set')}</div>
+        <div class="btns">${btn('lives', '+10 lives', 10)}<input id="ad-lives" inputmode="numeric" placeholder="lives">${btn('setlives', 'Set')}${btn('god', 'No life loss')}</div></section>
+      <section><h3>Enemies</h3><div class="btns">${btn('spawn', 'Raider')}${btn('spawn', 'Raider ×10', 10)}${btn('spawnboss', 'Boss')}</div></section>
+      <section><h3>Towers</h3>
+        <div class="btns">${btn('maxsel', 'Max selected')}${btn('maxall', 'Max all')}</div>
+        <div class="btns">${btn('delsel', 'Remove selected')}${btn('delall', 'Remove all')}</div></section>
+      <section><h3>Game</h3><div class="btns">${btn('lose', 'Game over')}${btn('win', 'Victory')}${btn('restart', 'Restart')}</div></section>
+      <section><h3>Live</h3><pre id="ad-info"></pre></section>`;
+    document.body.appendChild(el);
+    admin.el = el; admin.info = el.querySelector('#ad-info');
+    el.addEventListener('click', e => { const b = e.target.closest('button'); if (b) adminAct(b.dataset.a, b.dataset.arg); });
+  }
+
+  const num = id => { const v = Math.round(+document.getElementById(id).value); return Number.isFinite(v) ? v : null; };
+  const active = () => state.phase !== 'gameover' && state.phase !== 'win';
+  function clearField() { state.enemies = []; state.projectiles = []; state.spawnedThisWave = 0; state.spawnTimer = 0; }
+  function maxTower(t) { for (const k of t.type.isEconomy ? ['income'] : ['damage', 'speed', 'range']) t.levels[k] = UPGRADE_MAX_LEVEL; }
+  function removeTower(t) {
+    state.towers = state.towers.filter(x => x !== t);
+    state.towerGrid[t.row][t.col] = null;
+    if (state.selectedTower === t) state.selectedTower = null;
+  }
+  // Extra enemies outside a wave run as a wave that has already spawned
+  // everything, so they walk and the round ends when they are gone.
+  function spawnExtra(make) {
+    if (!active()) return;
+    if (state.phase === 'idle') { state.phase = 'wave'; state.spawnedThisWave = waveTargetCount(state.wave); }
+    state.enemies.push(make(Math.max(1, state.wave)));
+  }
+
+  function adminAct(a, arg) {
+    if (a === 'close') { admin.el.hidden = true; return; }
+    if (a === 'lock') { lockAdmin(); return; }
+    // Picking a wave clears the field and waits on Start Wave, as between rounds.
+    if (a === 'wave' || a === 'boss') {
+      let w = a === 'boss' ? Math.ceil((state.wave + 1) / BOSS_WAVE_INTERVAL) * BOSS_WAVE_INTERVAL : num('ad-wave');
+      if (!w) return;
+      w = Math.max(1, Math.min(TOTAL_WAVES, w));
+      if (!active()) { resetGame(); }
+      clearField(); state.wave = w - 1; state.phase = 'idle';
+    }
+    if (a === 'finish' && state.phase === 'wave') { for (const e of state.enemies) e.dead = true; state.spawnedThisWave = waveTargetCount(state.wave); }
+    if (a === 'killall') for (const e of state.enemies) e.dead = true;
+    if (a === 'pause') admin.paused = !admin.paused;
+    if (a === 'speed') { admin.speed = +arg; admin.paused = false; }
+    if (a === 'gold') state.gold += +arg;
+    if (a === 'setgold' && num('ad-gold') !== null) state.gold = Math.max(0, num('ad-gold'));
+    if (a === 'lives') state.lives += +arg;
+    if (a === 'setlives' && num('ad-lives') > 0) state.lives = num('ad-lives');
+    if (a === 'god') admin.god = !admin.god;
+    if (a === 'spawn') for (let i = 0; i < (+arg || 1); i++) spawnExtra(w => new Enemy(w));
+    if (a === 'spawnboss') spawnExtra(w => new Boss(w));
+    if (a === 'maxsel' && state.selectedTower) maxTower(state.selectedTower);
+    if (a === 'maxall') state.towers.forEach(maxTower);
+    if (a === 'delsel' && state.selectedTower) removeTower(state.selectedTower);
+    if (a === 'delall') state.towers.slice().forEach(removeTower);
+    if (a === 'lose' && active()) { state.phase = 'gameover'; showOverlay(`Game Over — Reached Wave ${state.wave}`); }
+    if (a === 'win' && active()) { state.phase = 'win'; showOverlay('Victory! The Kingdom is Saved!'); }
+    if (a === 'restart') resetGame();
+    updateStats();
+    refreshAdmin();
+  }
+
+  function refreshAdmin() {
+    if (!admin.el || admin.el.hidden) return;
+    const on = (sel, v) => { for (const b of admin.el.querySelectorAll(sel)) b.classList.toggle('on', v(b)); };
+    on('[data-a=god]', () => admin.god);
+    on('[data-a=pause]', () => admin.paused);
+    on('[data-a=speed]', b => !admin.paused && admin.speed === +b.dataset.arg);
+    const next = Math.min(state.wave + 1, TOTAL_WAVES), counts = {};
+    for (const t of state.towers) counts[t.type.name] = (counts[t.type.name] || 0) + 1;
+    const dps = state.towers.filter(t => !t.type.isEconomy).reduce((n, t) => n + t.damage / t.fireRate, 0);
+    const income = state.towers.filter(t => t.type.isEconomy).reduce((n, t) => n + t.income / t.type.incomeInterval, 0);
+    const boss = state.enemies.find(e => e.isBoss);
+    const sel = state.selectedTower;
+    admin.info.textContent = [
+      `phase ${state.phase}   speed ${admin.paused ? 'paused' : admin.speed + '×'}`,
+      `wave ${state.wave}/${TOTAL_WAVES}${isBossWave(state.wave) ? ' (boss)' : ''}   spawned ${state.spawnedThisWave}/${waveTargetCount(Math.max(1, state.wave))}`,
+      `gold ${Math.floor(state.gold)}   lives ${state.lives}`,
+      '',
+      `on field ${state.enemies.length}${boss ? `   boss ${Math.ceil(boss.hp)}/${boss.maxHp}` : ''}`,
+      `next wave ${next}: ${waveEnemyCount(next)} × ${waveEnemyHp(next)}hp @ ${waveEnemySpeed(next)}px/s${isBossWave(next) ? ` + boss ${waveBossHp(next)}hp` : ''}`,
+      '',
+      `towers ${state.towers.length}  ${Object.entries(counts).map(([k, v]) => k.split(' ')[0] + ' ' + v).join(', ')}`,
+      `dps ${dps.toFixed(0)}   income ${income.toFixed(1)}g/s`,
+      sel ? `selected ${sel.type.name} (${sel.col},${sel.row})  ${Object.entries(sel.levels).filter(([k]) => sel.type.isEconomy ? k === 'income' : k !== 'income').map(([k, v]) => k + ' ' + v).join(', ')}` : 'selected —',
+    ].join('\n');
+  }
+
+  if (adminOn) showAdminButton();
 
   buildTowerButtons();
   updateStats();
