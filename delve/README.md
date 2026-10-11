@@ -55,7 +55,7 @@ Touch controls appear by themselves on a touch screen. Hold the phone sideways
 | Touch | Does |
 |---|---|
 | Left thumb, drag sideways | Move |
-| Left thumb, push up | Jump — hold it up for higher |
+| Left thumb, push up | Jump — hold it up to jump higher and keep jumping |
 | Left thumb, pull down | Drop through a plank |
 | Right thumb, drag | Aim — it fires while you hold |
 | **Blink** button | Blink dash (while you have charges) |

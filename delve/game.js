@@ -187,6 +187,9 @@
     setTouchKey('left', !!L && L.dx < -14);
     setTouchKey('right', !!L && L.dx > 14);
     setTouchKey('jump', !!L && L.dy < -30);
+    // Holding the stick up keeps hopping: a fresh press each time you land.
+    // Only on the ground, so it never spends Featherfall's double jump.
+    if(touchKeys.has('jump') && player && player.ground) pressed.add('jump');
     setTouchKey('down', !!L && L.dy > 30 && Math.abs(L.dx) < L.dy);
     const R = sticks.right && stickVec(sticks.right);
     if(R && R.d > 12){
@@ -1388,7 +1391,7 @@
     const records = `<p>Deepest <b>${save.deepest || '—'}</b> &nbsp; Best <span class="bestName">${DIFFS[save.diff].name}</span> run <b class="best">${best ? fmtTime(best) : '—'}</b> &nbsp; Total kills <b>${save.kills}</b></p>`;
     const diffs = `<div class="diffs" role="radiogroup" aria-label="Difficulty">${Object.keys(DIFFS).map(k =>
       `<button class="diff" role="radio" data-diff="${k}" aria-checked="${k === save.diff}">${DIFFS[k].name}</button>`).join('')}</div>`;
-    const keysHelp = touchMode ? `<p class="keys">Left thumb: drag to run, push up to jump (hold for higher), pull down to drop through planks.<br>
+    const keysHelp = touchMode ? `<p class="keys">Left thumb: drag to run, push up to jump (hold it up to jump higher and keep jumping), pull down to drop through planks.<br>
       Right thumb: drag to aim, and it fires while you hold. Blink and pause are buttons.</p>` : `<p class="keys"><kbd>A</kbd><kbd>D</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump (hold for higher) &nbsp; <kbd>S</kbd> drop through planks<br>
       mouse aims, click or hold (or <kbd>F</kbd>) to fire &nbsp; <kbd>Shift</kbd> blink &nbsp; <kbd>Esc</kbd> pause</p>`;
     let html = '';
