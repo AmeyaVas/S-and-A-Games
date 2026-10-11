@@ -53,6 +53,9 @@
   .selgroup .lbl{font-size:10px; letter-spacing:.14em; color:var(--muted);
     text-transform:uppercase; padding-right:2px}
   .selgroup + .selgroup{border-left:1px solid #1e2440; padding-left:10px}
+  /* The dropdown that stands in for the hole buttons on a phone held sideways
+     (see below). Hidden everywhere else. */
+  #holepick{display:none}
   /* Grow the board to whatever the viewport allows. The 3rd term keeps the
      3:2 box from pushing the HUD and buttons off-screen on short windows —
      ~275px is the chrome above and below it (the hole selector adds ~42px). */
@@ -143,6 +146,18 @@
     #bar{grid-area:bar; width:100%; gap:6px; justify-content:flex-start}
     #bar button{padding:6px 10px; font-size:12px}
     #hint{grid-area:hint; font-size:11px; text-align:left}
+  }
+  /* A phone on its side has no height for 44px hole buttons, so the touch
+     version swaps them for one dropdown: a 44px target that opens the phone's
+     own picker. 16px text stops iOS zooming in when it opens. */
+  @media (pointer:coarse) and (orientation:landscape) and (max-height:560px){
+    #sel .selgroup{display:none}
+    #holepick{
+      display:block; width:100%; height:44px; padding:0 10px;
+      font:inherit; font-size:16px; font-weight:600; color:var(--ink);
+      background:var(--panel); border:1px solid #2a315a; border-radius:9px;
+    }
+    #holepick:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
   }
   /* The shortest phones (iPhone SE on its side): lose the title and keep the two
      buttons on one row, so the hint still fits under them. */
@@ -450,6 +465,12 @@ makeStars();
 const selBtns = [];
 function buildSelector(){
   const s = document.getElementById('sel');
+  const pick = document.createElement('select');
+  pick.id = 'holepick';
+  pick.setAttribute('aria-label', 'Hole');
+  pick.onchange = () => { const i = +pick.value; if(i <= reached) loadHole(i); };
+  s.appendChild(pick);
+  const pickGroups = [];
   let group = null, sec = -1;
   for(let i=0;i<HOLES.length;i++){
     if(holeSection(HOLES[i]) !== sec){
@@ -462,6 +483,14 @@ function buildSelector(){
       group.appendChild(lbl);
       s.appendChild(group);
     }
+    if(!pickGroups[sec]){
+      pickGroups[sec] = document.createElement('optgroup');
+      pickGroups[sec].label = SECTIONS[sec].name;
+      pick.appendChild(pickGroups[sec]);
+    }
+    const o = document.createElement('option');
+    o.value = i;
+    pickGroups[sec].appendChild(o);
     const b = document.createElement('button');
     b.textContent = i+1;
     b.onclick = () => { if(i <= reached) loadHole(i); };
@@ -469,7 +498,9 @@ function buildSelector(){
     selBtns.push(b);
   }
 }
+let holePick;
 function syncSelector(){
+  holePick ||= document.getElementById('holepick');
   for(let i=0;i<selBtns.length;i++){
     const b = selBtns[i];
     const locked = i > reached;
@@ -478,7 +509,12 @@ function syncSelector(){
     b.title = locked ? `Hole ${i+1} — reach it to unlock`
             : scores[i]!=null ? `Hole ${i+1} — holed in ${scores[i]} (par ${HOLES[i].par})`
             : `Hole ${i+1} — par ${HOLES[i].par}`;
+    const o = holePick.options[i];
+    o.disabled = locked;
+    o.textContent = locked ? `Hole ${i+1} · locked`
+                  : `Hole ${i+1} · par ${HOLES[i].par}` + (scores[i]!=null ? ` · ✓ ${scores[i]}` : '');
   }
+  holePick.value = holeIdx;
 }
 
 function loadHole(i){
