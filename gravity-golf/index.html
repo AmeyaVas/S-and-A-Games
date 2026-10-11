@@ -96,6 +96,13 @@
   #start h2 b{color:var(--accent)}
   #start p{color:var(--muted); margin-bottom:22px}
   #start .row{display:flex; gap:8px; justify-content:center}
+  /* 44px tap targets on touch screens: hole numbers, Replay / New game, and
+     Start. A mouse keeps the 30px holes. Not on a phone held sideways, whose
+     side column has no height to spare; that layout keeps its own sizes below. */
+  @media (pointer:coarse) and (orientation:portrait), (pointer:coarse) and (min-height:561px){
+    #sel button{width:44px; height:44px}
+    #bar button, #start .row button{min-height:44px}
+  }
   /* Back to the landing page. Pinned to the same corner as Castle Defense's, and above
      the title card (z-index 10) so it works before a round starts too. */
   .back{
