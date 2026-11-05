@@ -1,4 +1,4 @@
-# S & A Games
+# Sand Games
 
 Five self-contained browser games: Gravity Golf, Castle Defense, Pentakeover,
 Tank Duel, Delve.
@@ -29,10 +29,10 @@ Two preview configurations in `.claude/launch.json`:
 
 | Name | Command | When |
 |---|---|---|
-| `s-and-a-games` | `python -m http.server 8777` | local development |
-| `s-and-a-games-node` | `node .claude/serve.js . 4173` | anywhere bare `python` may not resolve, including cloud sessions |
+| `sand-games` | `python -m http.server 8777` | local development |
+| `sand-games-node` | `node .claude/serve.js . 4173` | anywhere bare `python` may not resolve, including cloud sessions |
 
-Prefer `s-and-a-games-node` when you are not on the usual Windows machine.
+Prefer `sand-games-node` when you are not on the usual Windows machine.
 
 ## Git
 
