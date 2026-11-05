@@ -1,4 +1,4 @@
-# Sand Games
+# S & A Games
 
 Five browser games in one repo. None has a build step, a package manager, or a
 single dependency — every game is plain HTML, CSS and JavaScript, and runs by
